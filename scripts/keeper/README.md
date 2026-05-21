@@ -1,7 +1,7 @@
 # Noeracle attestation service
 
 Off-chain service for the Noeracle pull oracle. It polls five exchanges for
-spot prices, computes a per-asset median, signs it with the publisher's
+spot prices, computes a per-asset weighted average, signs it with the publisher's
 Ed25519 key, and serves the freshly signed attestation over HTTP.
 
 ## Run
@@ -19,6 +19,7 @@ repo-root `.env`. Optional `KEEPER_PORT` (default 8080).
 
 | Route | Description |
 |-------|-------------|
+| `GET /` | Service info and the endpoint list |
 | `GET /health` | Liveness, poll count, live asset count, publisher key |
 | `GET /v1/latest` | Latest signed attestation for every asset |
 | `GET /v1/latest/:asset` | Latest signed attestation for one asset (`BTC-USD`, `ETH-USD`, …) |
