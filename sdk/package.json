@@ -15,6 +15,7 @@
   "files": ["dist", "README.md"],
   "scripts": {
     "build": "tsc",
+    "demo": "node examples/e2e.mjs",
     "prepublishOnly": "tsc"
   },
   "keywords": ["stellar", "soroban", "oracle", "price-feed", "pull-oracle"],
