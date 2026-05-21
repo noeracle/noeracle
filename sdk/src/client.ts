@@ -44,17 +44,16 @@ export class Fresh {
   }
 
   /**
-   * Build the `update_batch_ed25519_args` operation to prepend to your
-   * transaction. It verifies the publisher signature(s) on chain and writes
-   * the price(s). All fetched attestations must share one round.
+   * The six `update_batch_ed25519_args` arguments as ScVals, in order:
+   * `[assets, prices, timestamp, round_id, pubkey, sigs]`. Spread these into
+   * a call to your own contract to verify a price inline (the in-contract
+   * pattern); use `toUpdateOp` for a standalone oracle invocation. All
+   * fetched attestations must share one round.
    */
-  toUpdateOp(contractId?: string): xdr.Operation {
-    const id = contractId ?? this.defaultContractId;
-    if (!id) throw new NoeracleError("toUpdateOp: a contract id is required");
+  updateArgs(): xdr.ScVal[] {
     if (this.attestations.length === 0) {
-      throw new NoeracleError("toUpdateOp: no attestations to submit");
+      throw new NoeracleError("updateArgs: no attestations");
     }
-
     const first = this.attestations[0]!;
     const sameRound = this.attestations.every(
       (a) => a.timestamp === first.timestamp && a.round_id === first.round_id,
@@ -64,30 +63,36 @@ export class Fresh {
     const hex = (s: string): Buffer => Buffer.from(s, "hex");
     const bytes = (b: Buffer): xdr.ScVal => xdr.ScVal.scvBytes(b);
 
-    // The on-chain asset tag is the first 8 bytes of the signed message.
-    const assets = xdr.ScVal.scvVec(
-      this.attestations.map((a) => bytes(hex(a.message).subarray(0, 8))),
-    );
-    const prices = xdr.ScVal.scvVec(
-      this.attestations.map((a) =>
-        nativeToScVal(BigInt(a.price), { type: "i128" }),
+    return [
+      // The on-chain asset tag is the first 8 bytes of the signed message.
+      xdr.ScVal.scvVec(
+        this.attestations.map((a) => bytes(hex(a.message).subarray(0, 8))),
       ),
-    );
-    const sigs = xdr.ScVal.scvVec(
-      this.attestations.map((a) => bytes(hex(a.signature))),
-    );
-    const timestamp = nativeToScVal(BigInt(first.timestamp), { type: "u64" });
-    const roundId = nativeToScVal(BigInt(first.round_id), { type: "u64" });
-    const pubkey = bytes(hex(first.publisher));
+      xdr.ScVal.scvVec(
+        this.attestations.map((a) =>
+          nativeToScVal(BigInt(a.price), { type: "i128" }),
+        ),
+      ),
+      nativeToScVal(BigInt(first.timestamp), { type: "u64" }),
+      nativeToScVal(BigInt(first.round_id), { type: "u64" }),
+      bytes(hex(first.publisher)),
+      xdr.ScVal.scvVec(
+        this.attestations.map((a) => bytes(hex(a.signature))),
+      ),
+    ];
+  }
 
+  /**
+   * Build a standalone `update_batch_ed25519_args` operation — the oracle
+   * verifies the publisher signature(s) and stores the price(s). Prepend it
+   * to your transaction.
+   */
+  toUpdateOp(contractId?: string): xdr.Operation {
+    const id = contractId ?? this.defaultContractId;
+    if (!id) throw new NoeracleError("toUpdateOp: a contract id is required");
     return new Contract(id).call(
       "update_batch_ed25519_args",
-      assets,
-      prices,
-      timestamp,
-      roundId,
-      pubkey,
-      sigs,
+      ...this.updateArgs(),
     );
   }
 }
