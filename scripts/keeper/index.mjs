@@ -28,17 +28,20 @@ if (expectedPublic && keeper.stats().publisher !== expectedPublic) {
 
 const startedAt = Date.now();
 
+const { httpServer, broadcast } = createServer(keeper, startedAt);
+
 async function loop() {
   const t0 = Date.now();
   try {
     await keeper.pollOnce();
+    broadcast();
   } catch (err) {
     console.error("poll error:", err.message);
   }
   setTimeout(loop, Math.max(0, POLL_INTERVAL_MS - (Date.now() - t0)));
 }
 
-createServer(keeper, startedAt).listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(
     `Noeracle attestation service listening on :${PORT} ` +
       `(publisher ${keeper.stats().publisher.slice(0, 16)}…)`,

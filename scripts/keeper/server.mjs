@@ -1,15 +1,18 @@
-// HTTP surface for the attestation service:
+// HTTP + SSE surface for the attestation service:
 //   GET /health            — liveness + keeper stats
 //   GET /v1/latest         — latest signed attestation for every asset
 //   GET /v1/latest/:asset  — latest signed attestation for one asset
 //                            (asset path uses '-' for '/', e.g. BTC-USD)
+//   GET /v1/stream         — Server-Sent Events: a `prices` event each round
 
 import http from "node:http";
 
 export function createServer(keeper, startedAt) {
-  return http.createServer((req, res) => {
+  const sseClients = new Set();
+
+  const httpServer = http.createServer((req, res) => {
     const url = new URL(req.url, "http://localhost");
-    const send = (code, body) => {
+    const sendJson = (code, body) => {
       res.writeHead(code, {
         "content-type": "application/json",
         "access-control-allow-origin": "*",
@@ -17,18 +20,33 @@ export function createServer(keeper, startedAt) {
       res.end(JSON.stringify(body));
     };
 
-    if (req.method !== "GET") return send(405, { error: "method not allowed" });
+    if (req.method !== "GET") return sendJson(405, { error: "method not allowed" });
 
     if (url.pathname === "/health") {
-      return send(200, {
+      return sendJson(200, {
         status: "ok",
         uptime_s: Math.floor((Date.now() - startedAt) / 1000),
+        sse_clients: sseClients.size,
         ...keeper.stats(),
       });
     }
 
     if (url.pathname === "/v1/latest") {
-      return send(200, { assets: keeper.getAll() });
+      return sendJson(200, { assets: keeper.getAll() });
+    }
+
+    if (url.pathname === "/v1/stream") {
+      res.writeHead(200, {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+        "access-control-allow-origin": "*",
+      });
+      // Send the current snapshot immediately, then stream every round.
+      res.write(`event: prices\ndata: ${JSON.stringify({ assets: keeper.getAll() })}\n\n`);
+      sseClients.add(res);
+      req.on("close", () => sseClients.delete(res));
+      return;
     }
 
     const match = url.pathname.match(/^\/v1\/latest\/(.+)$/);
@@ -36,10 +54,25 @@ export function createServer(keeper, startedAt) {
       const asset = decodeURIComponent(match[1]).replace("-", "/");
       const attestation = keeper.getLatest(asset);
       return attestation
-        ? send(200, attestation)
-        : send(404, { error: "no attestation for asset", asset });
+        ? sendJson(200, attestation)
+        : sendJson(404, { error: "no attestation for asset", asset });
     }
 
-    send(404, { error: "not found" });
+    sendJson(404, { error: "not found" });
   });
+
+  // Push the latest attestations to every connected SSE client.
+  function broadcast() {
+    if (sseClients.size === 0) return;
+    const payload = `event: prices\ndata: ${JSON.stringify({ assets: keeper.getAll() })}\n\n`;
+    for (const res of sseClients) {
+      try {
+        res.write(payload);
+      } catch {
+        sseClients.delete(res);
+      }
+    }
+  }
+
+  return { httpServer, broadcast };
 }

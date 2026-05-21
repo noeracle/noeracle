@@ -38,6 +38,7 @@ then reads the just-verified price via the contract's `get_price`.
 |---|---|
 | `new Noeracle({ network?, attestationUrl?, contractId? })` | Create a client |
 | `oracle.fetchLatest(assets: string[]): Promise<Fresh>` | Fetch signed prices |
+| `oracle.subscribe(assets, onUpdate, onError?): Subscription` | Live SSE price stream |
 | `fresh.toUpdateOp(contractId?): xdr.Operation` | Build the verification op |
 | `fresh.prices: PriceEntry[]` | Decoded prices |
 | `fresh.price(asset): PriceEntry` | One decoded price |

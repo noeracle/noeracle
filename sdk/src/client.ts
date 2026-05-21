@@ -4,6 +4,7 @@ import type {
   Network,
   NoeracleConfig,
   PriceEntry,
+  Subscription,
 } from "./types.js";
 import {
   AssetUnavailableError,
@@ -11,6 +12,7 @@ import {
   InconsistentRoundError,
   NoeracleError,
 } from "./errors.js";
+import { streamSse } from "./stream.js";
 
 const DEFAULT_ATTESTATION_URL = "https://attest.noeracle.com";
 
@@ -139,5 +141,55 @@ export class Noeracle {
       return att;
     });
     return new Fresh(picked, this.contractId);
+  }
+
+  /**
+   * Subscribe to a live stream of fresh prices. `onUpdate` fires with a Fresh
+   * for the requested assets each time the service signs a new round. The
+   * connection reconnects automatically; call `.close()` on the returned
+   * handle to stop.
+   */
+  subscribe(
+    assets: string[],
+    onUpdate: (fresh: Fresh) => void,
+    onError?: (err: NoeracleError) => void,
+  ): Subscription {
+    if (assets.length === 0) {
+      throw new NoeracleError("subscribe: no assets requested");
+    }
+    const controller = new AbortController();
+    streamSse(
+      `${this.attestationUrl}/v1/stream`,
+      {
+        onEvent: (event, data) => {
+          if (event !== "prices") return;
+          let snapshot: Record<string, Attestation>;
+          try {
+            const parsed = JSON.parse(data) as {
+              assets?: Record<string, Attestation>;
+            };
+            snapshot = parsed.assets ?? {};
+          } catch {
+            onError?.(
+              new AttestationServiceError("stream sent malformed data"),
+            );
+            return;
+          }
+          const picked = assets
+            .map((a) => snapshot[a])
+            .filter((a): a is Attestation => a !== undefined);
+          if (picked.length > 0) {
+            onUpdate(new Fresh(picked, this.contractId));
+          }
+        },
+        onError: (err) => {
+          onError?.(
+            new AttestationServiceError(`stream error: ${err.message}`),
+          );
+        },
+      },
+      controller.signal,
+    );
+    return { close: () => controller.abort() };
   }
 }

@@ -4,6 +4,7 @@ export type {
   Network,
   NoeracleConfig,
   PriceEntry,
+  Subscription,
 } from "./types.js";
 export {
   NoeracleError,

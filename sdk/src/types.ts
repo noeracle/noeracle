@@ -42,3 +42,9 @@ export interface PriceEntry {
   /** Number of exchange sources behind the median. */
   sources: number;
 }
+
+/** A live price subscription. */
+export interface Subscription {
+  /** Stop receiving updates and close the stream connection. */
+  close(): void;
+}

@@ -22,6 +22,7 @@ repo-root `.env`. Optional `KEEPER_PORT` (default 8080).
 | `GET /health` | Liveness, poll count, live asset count, publisher key |
 | `GET /v1/latest` | Latest signed attestation for every asset |
 | `GET /v1/latest/:asset` | Latest signed attestation for one asset (`BTC-USD`, `ETH-USD`, …) |
+| `GET /v1/stream` | Server-Sent Events — a `prices` event every signing round |
 
 ## Attestation shape
 
