@@ -50,7 +50,8 @@ consumer submits the price, `timestamp`, `round_id`, `publisher`, and
 
 - **Polling** — every 500 ms, all exchanges for all assets, in parallel.
 - **Aggregation** — stale samples (>5 s) dropped; outliers beyond 3σ dropped
-  when ≥3 sources are present; median of the rest.
+  when ≥3 sources are present; exchange-weighted average of the rest
+  (Binance ×3, Coinbase ×2, OKX ×2, Kraken ×1, Bybit ×1).
 - **Signing** — `round_id = floor(unix_ms / 500)`, deterministic and
   monotonic; the message is Ed25519-signed each round.
 - Stateless and single-process — restart and it resumes signing.

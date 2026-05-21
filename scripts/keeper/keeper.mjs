@@ -2,7 +2,7 @@
 // per-asset median, and signs it into a fresh attestation each round.
 
 import {
-  ASSETS, ROUND_WINDOW_MS, PRICE_SCALE, STALENESS_MS, OUTLIER_STDDEV,
+  ASSETS, ROUND_WINDOW_MS, PRICE_SCALE, STALENESS_MS, OUTLIER_STDDEV, WEIGHTS,
 } from "./config.mjs";
 import { EXCHANGES, fetchPrice } from "./exchanges.mjs";
 import { aggregate } from "./aggregate.mjs";
@@ -40,7 +40,8 @@ export function createKeeper(secretKeyHex) {
         exchange, price: s.price, ts: s.ts,
       }));
       const agg = aggregate(arr, {
-        stalenessMs: STALENESS_MS, outlierStddev: OUTLIER_STDDEV, now,
+        stalenessMs: STALENESS_MS, outlierStddev: OUTLIER_STDDEV,
+        weights: WEIGHTS, now,
       });
       if (!agg) continue;
 
