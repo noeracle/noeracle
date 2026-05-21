@@ -12,7 +12,7 @@
 use soroban_sdk::{
     contract, contracterror, contractimpl, contracttype,
     crypto::bls12_381::{Bls12381G1Affine, Bls12381G2Affine},
-    panic_with_error, Address, Bytes, BytesN, Env, Vec,
+    Address, Bytes, BytesN, Env, Vec,
 };
 
 /// Errors returned by the production pull-mode entrypoint and admin calls.
@@ -61,23 +61,29 @@ pub struct OracleV0;
 #[contractimpl]
 impl OracleV0 {
     /// One-time setup: record the admin Address and the initial publisher
-    /// Ed25519 key set. Panics if the contract is already initialized.
-    pub fn init(env: Env, admin: Address, publishers: Vec<BytesN<32>>) {
+    /// Ed25519 key set. Errors if the contract is already initialized.
+    pub fn init(
+        env: Env,
+        admin: Address,
+        publishers: Vec<BytesN<32>>,
+    ) -> Result<(), Error> {
         if env.storage().instance().has(&DataKey::Admin) {
-            panic_with_error!(&env, Error::AlreadyInitialized);
+            return Err(Error::AlreadyInitialized);
         }
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Publishers, &publishers);
+        Ok(())
     }
 
     /// Replace the publisher Ed25519 key set. Admin-authenticated.
-    pub fn set_publishers(env: Env, publishers: Vec<BytesN<32>>) {
+    pub fn set_publishers(env: Env, publishers: Vec<BytesN<32>>) -> Result<(), Error> {
         if !env.storage().instance().has(&DataKey::Admin) {
-            panic_with_error!(&env, Error::NotInitialized);
+            return Err(Error::NotInitialized);
         }
         let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
         admin.require_auth();
         env.storage().instance().set(&DataKey::Publishers, &publishers);
+        Ok(())
     }
 
     // -------- Ed25519 (publisher pubkeys passed as args) --------
@@ -116,26 +122,26 @@ impl OracleV0 {
         round_id: u64,
         pubkey: BytesN<32>,
         sigs: Vec<BytesN<64>>,
-    ) {
+    ) -> Result<(), Error> {
         let n = assets.len();
         if prices.len() != n || sigs.len() != n {
-            panic_with_error!(&env, Error::BatchLengthMismatch);
+            return Err(Error::BatchLengthMismatch);
         }
 
         // The signing key must be a registered publisher.
         if !env.storage().instance().has(&DataKey::Publishers) {
-            panic_with_error!(&env, Error::NotInitialized);
+            return Err(Error::NotInitialized);
         }
         let publishers: Vec<BytesN<32>> =
             env.storage().instance().get(&DataKey::Publishers).unwrap();
         if !is_publisher(&publishers, &pubkey) {
-            panic_with_error!(&env, Error::UnknownPublisher);
+            return Err(Error::UnknownPublisher);
         }
 
         // Reject rounds signed more than STALENESS_SECS ago.
         let now = env.ledger().timestamp();
         if now.saturating_sub(timestamp) > STALENESS_SECS {
-            panic_with_error!(&env, Error::StalePrice);
+            return Err(Error::StalePrice);
         }
 
         let crypto = env.crypto();
@@ -153,11 +159,12 @@ impl OracleV0 {
                 .get(&DataKey::PriceTemp(asset.clone()));
             if let Some(prev) = prev {
                 if round_id <= prev.round_id {
-                    panic_with_error!(&env, Error::StaleRound);
+                    return Err(Error::StaleRound);
                 }
             }
             write_temp(&env, asset, PriceEntry { price, timestamp, round_id });
         }
+        Ok(())
     }
 
     // -------- Ed25519 (publisher pubkeys from instance storage) --------
@@ -326,3 +333,6 @@ fn write_temp(env: &Env, asset: BytesN<8>, entry: PriceEntry) {
         .temporary()
         .extend_ttl(&key, TEMP_THRESHOLD, TEMP_EXTEND);
 }
+
+#[cfg(test)]
+mod test;
