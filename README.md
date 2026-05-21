@@ -17,19 +17,29 @@ oracle-priced AMM swaps require.
 
 - **Network:** Stellar Testnet
 - **Contract:** [`CAYIP67UDVX5UPXGN3XDAWVIEFBAVG6G7LUESEOU3NUQKTWN55W34YBG`](https://stellar.expert/explorer/testnet/contract/CAYIP67UDVX5UPXGN3XDAWVIEFBAVG6G7LUESEOU3NUQKTWN55W34YBG)
+- **Attestation service:** https://noeracle.fly.dev
 
 v0 runs a single self-operated signer and has not been independently audited.
 Its purpose is to validate the architecture and ground signature-scheme and
 storage decisions in measured Soroban resource cost. A multi-publisher,
 audited version is future work.
 
+## Documentation
+
+- [Quickstart](docs/quickstart.md) — integrate in a few lines
+- [Integration guide](docs/integration.md) — off-chain and in-contract patterns, contract API, failure modes
+- [Threat model](docs/threat-model.md) — v0 trust assumptions
+- [Examples](sdk/examples/) — runnable worked examples
+
 ## Repository layout
 
 | Path | What it is |
 |------|------------|
-| `oracle_v0/` | The Soroban price-oracle contract (`cdylib`, crate `noeracle_oracle_v0`). Production entrypoint: `update_batch_ed25519_args`, which verifies signed prices inline in a consumer transaction. |
-| `bench/` | Soroban contract + host-emulated tests (crate `noeracle_bench`) that measure each crypto primitive — Ed25519, secp256k1, secp256r1, BLS12-381 — in isolation, with the host budget reset between calls. The printed CPU / memory cost tables are the deliverable. |
-| `scripts/` | Node end-to-end drivers. `run_oracle_bench.mjs` measures real resource and total fees per entrypoint against a live Soroban RPC; `fetch_ledger_limits.mjs` dumps live network `ConfigSettingEntry` limits. |
+| `oracle_v0/` | The Soroban price-oracle contract (crate `noeracle_oracle_v0`). Production entrypoint: `update_batch_ed25519_args` — verifies signed prices inline in a consumer transaction. |
+| `sdk/` | `@noeracle/sdk` — the TypeScript SDK consumers integrate with. |
+| `scripts/` | Node code: `keeper/` is the attestation service (polls 5 exchanges, signs, serves HTTP + SSE); `run_oracle_bench.mjs` and `fetch_ledger_limits.mjs` are fee-measurement drivers. |
+| `bench/` | Soroban contract + host-emulated tests (crate `noeracle_bench`) measuring each crypto primitive — Ed25519, secp256k1, secp256r1, BLS12-381 — in isolation. The printed CPU / memory cost tables are the deliverable. |
+| `docs/` | Quickstart, integration guide, threat model. |
 
 `bench/` and `oracle_v0/` are a matched pair: `bench/` measures crypto
 primitives in the simulated host, and `scripts/run_oracle_bench.mjs` measures
