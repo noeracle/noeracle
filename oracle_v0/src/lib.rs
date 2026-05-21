@@ -25,7 +25,6 @@ pub enum Error {
     BatchLengthMismatch = 3,
     UnknownPublisher = 4,
     StalePrice = 5,
-    StaleRound = 6,
 }
 
 #[contracttype]
@@ -151,18 +150,23 @@ impl OracleV0 {
             let msg = build_msg(&env, &asset, price, timestamp, round_id);
             crypto.ed25519_verify(&pubkey, &msg, &sigs.get_unchecked(i));
 
-            // round_id must strictly exceed the stored round for this asset,
-            // so a replayed older signed message cannot overwrite fresh state.
+            // The per-asset cache is kept monotonic: advance it only when
+            // this round is newer than what is stored. A lagging or replayed
+            // round is a silent no-op — it must never fail the consumer's
+            // transaction, because transaction landing order does not track
+            // round order across independent pull consumers. Staleness is
+            // already bounded by the STALENESS_SECS check above.
             let prev: Option<PriceEntry> = env
                 .storage()
                 .temporary()
                 .get(&DataKey::PriceTemp(asset.clone()));
-            if let Some(prev) = prev {
-                if round_id <= prev.round_id {
-                    return Err(Error::StaleRound);
-                }
+            let is_newer = match prev {
+                Some(prev) => round_id > prev.round_id,
+                None => true,
+            };
+            if is_newer {
+                write_temp(&env, asset, PriceEntry { price, timestamp, round_id });
             }
-            write_temp(&env, asset, PriceEntry { price, timestamp, round_id });
         }
         Ok(())
     }

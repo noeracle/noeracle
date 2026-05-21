@@ -135,16 +135,35 @@ fn rejects_stale_price() {
 }
 
 #[test]
-fn rejects_stale_round() {
+fn non_newer_round_is_silent_noop() {
     let env = Env::default();
     let (client, signer) = setup(&env);
+    // Round 5 establishes the cached price.
     let (a1, p1, pk1, s1) = sign_round(&env, &signer, &[(ASSET_BTC, 100)], BASE_TS, 5);
     client.update_batch_ed25519_args(&a1, &p1, &BASE_TS, &5u64, &pk1, &s1);
 
-    // The same round_id again is not strictly greater — must be rejected.
-    let (a2, p2, pk2, s2) = sign_round(&env, &signer, &[(ASSET_BTC, 200)], BASE_TS, 5);
-    let res = client.try_update_batch_ed25519_args(&a2, &p2, &BASE_TS, &5u64, &pk2, &s2);
-    assert_eq!(res, Err(Ok(Error::StaleRound)));
+    // A lagging round (3) and an equal round (5) must NOT fail the call — a
+    // consumer's tx cannot be rejected because of cross-consumer ordering.
+    let (a2, p2, pk2, s2) = sign_round(&env, &signer, &[(ASSET_BTC, 200)], BASE_TS, 3);
+    client.update_batch_ed25519_args(&a2, &p2, &BASE_TS, &3u64, &pk2, &s2);
+    let (a3, p3, pk3, s3) = sign_round(&env, &signer, &[(ASSET_BTC, 300)], BASE_TS, 5);
+    client.update_batch_ed25519_args(&a3, &p3, &BASE_TS, &5u64, &pk3, &s3);
+
+    // The cache still holds the round-5 price; lagging rounds were skipped.
+    let stored = client
+        .get_price(&BytesN::from_array(&env, &ASSET_BTC))
+        .unwrap();
+    assert_eq!(stored.price, 100);
+    assert_eq!(stored.round_id, 5);
+
+    // A strictly newer round advances the cache.
+    let (a4, p4, pk4, s4) = sign_round(&env, &signer, &[(ASSET_BTC, 400)], BASE_TS, 6);
+    client.update_batch_ed25519_args(&a4, &p4, &BASE_TS, &6u64, &pk4, &s4);
+    let stored = client
+        .get_price(&BytesN::from_array(&env, &ASSET_BTC))
+        .unwrap();
+    assert_eq!(stored.price, 400);
+    assert_eq!(stored.round_id, 6);
 }
 
 #[test]
