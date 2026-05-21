@@ -599,12 +599,21 @@ async function runAuthEntryScenario(n) {
 async function main() {
   const results = [];
 
-  // Set publishers once so update_ed25519_stored works
+  // init records the admin + publisher keys (one-time); set_publishers then
+  // (re)sets the measurement key set, authenticated by the admin = tx source.
+  // On repeat runs init simulates as AlreadyInitialized and is skipped.
   {
     const msg = buildMsg(ASSET, PRICE, TS, ROUND);
     const { pks } = genEd25519Set(5, msg);
-    console.log("Initializing publishers (5 keys)...");
-    await runScenario("init publishers (5)", () =>
+    console.log("Initializing contract (admin + 5 publisher keys)...");
+    await runScenario("init (admin + 5 publishers)", () =>
+      contract.call(
+        "init",
+        addressScVal(adminKp.publicKey()),
+        vecScVal(pks.map(bytesScVal))
+      )
+    , { runs: 1 });
+    await runScenario("set_publishers (5)", () =>
       contract.call("set_publishers", vecScVal(pks.map(bytesScVal)))
     , { runs: 1 });
   }
