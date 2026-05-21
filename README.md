@@ -15,6 +15,9 @@ oracle-priced AMM swaps require.
 
 **v0 — prototype. Testnet only. Not for production capital.**
 
+- **Network:** Stellar Testnet
+- **Contract:** [`CDATY2HS5AWFZFQUWCK5SYDPPNEZHG3773GHGYCXLTKR7J5VIYSELWQR`](https://stellar.expert/explorer/testnet/contract/CDATY2HS5AWFZFQUWCK5SYDPPNEZHG3773GHGYCXLTKR7J5VIYSELWQR)
+
 v0 runs a single self-operated signer and has not been independently audited.
 Its purpose is to validate the architecture and ground signature-scheme and
 storage decisions in measured Soroban resource cost. A multi-publisher,
