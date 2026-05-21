@@ -9,7 +9,8 @@
     "limits:mainnet": "NETWORK=mainnet node fetch_ledger_limits.mjs",
     "bench:testnet": "NETWORK=testnet node run_oracle_bench.mjs",
     "bench:mainnet": "NETWORK=mainnet node run_oracle_bench.mjs",
-    "keeper": "node keeper/index.mjs"
+    "keeper": "node keeper/index.mjs",
+    "test": "node --test keeper/"
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^14.4.3",

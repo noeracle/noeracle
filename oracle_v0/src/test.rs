@@ -213,3 +213,60 @@ fn set_publishers_rotates_the_key_set() {
     let (a2, p2, pk2, s2) = sign_round(&env, &new_signer, &[(ASSET_BTC, 100)], BASE_TS, 1);
     client.update_batch_ed25519_args(&a2, &p2, &BASE_TS, &1u64, &pk2, &s2);
 }
+
+// Decode an N-byte value from a hex string (test helper).
+fn hex_bytes<const N: usize>(s: &str) -> [u8; N] {
+    let b = s.as_bytes();
+    let mut out = [0u8; N];
+    for i in 0..N {
+        let hi = (b[2 * i] as char).to_digit(16).unwrap() as u8;
+        let lo = (b[2 * i + 1] as char).to_digit(16).unwrap() as u8;
+        out[i] = (hi << 4) | lo;
+    }
+    out
+}
+
+// Cross-language conformance: a message + signature produced by the JS keeper
+// encoder (scripts/keeper/message.mjs) must verify against this contract's
+// build_msg. The same golden vector is pinned on the JS side by
+// scripts/keeper/message.test.mjs. If the 40-byte format drifts in either
+// language, one of the two tests fails.
+#[test]
+fn conformance_with_js_keeper_encoder() {
+    // Golden vector — asset "BTCUSD", price 6543210000000, ts 1700000000,
+    // round 1, signed with the test key 0x01 repeated 32 times.
+    const PUBKEY: &str =
+        "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c";
+    const SIGNATURE: &str = "effc695c3dd70bc5da1bcea2475739340951a1fce74a6fd9e3c8bebae3147e7334b9d7f0bdb4d0770c94c8d7ad80094ddef708c30eddcb7a5b5e7a0f081e8200";
+
+    let env = Env::default();
+    env.mock_all_auths();
+    env.ledger().set_timestamp(1_700_000_000);
+    let contract_id = env.register(OracleV0, ());
+    let client = OracleV0Client::new(&env, &contract_id);
+
+    let pubkey: BytesN<32> = BytesN::from_array(&env, &hex_bytes::<32>(PUBKEY));
+    let admin = Address::generate(&env);
+    let mut publishers = Vec::new(&env);
+    publishers.push_back(pubkey.clone());
+    client.init(&admin, &publishers);
+
+    let mut assets = Vec::new(&env);
+    assets.push_back(BytesN::from_array(&env, b"BTCUSD\0\0"));
+    let mut prices = Vec::new(&env);
+    prices.push_back(6_543_210_000_000i128);
+    let mut sigs = Vec::new(&env);
+    sigs.push_back(BytesN::from_array(&env, &hex_bytes::<64>(SIGNATURE)));
+
+    // A one-byte disagreement between build_msg and the JS encoder would make
+    // this Ed25519 verification fail.
+    client.update_batch_ed25519_args(
+        &assets, &prices, &1_700_000_000u64, &1u64, &pubkey, &sigs,
+    );
+
+    let stored = client
+        .get_price(&BytesN::from_array(&env, b"BTCUSD\0\0"))
+        .unwrap();
+    assert_eq!(stored.price, 6_543_210_000_000);
+    assert_eq!(stored.round_id, 1);
+}
