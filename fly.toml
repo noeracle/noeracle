@@ -1,0 +1,27 @@
+# Noeracle attestation service — Fly.io deployment config.
+
+app = "noeracle"
+primary_region = "fra"
+
+[env]
+  KEEPER_PORT = "8080"
+  # Publisher Ed25519 public key — public, safe to commit. The matching
+  # secret is set separately as a Fly secret: NOERACLE_PUBLISHER_SECRET_HEX
+  NOERACLE_PUBLISHER_PUBLIC_HEX = "8f8650ca5cb1bc7491b68e02f4d89e54da1f1996e161897b0eabadc28534e17a"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "3s"
+    grace_period = "10s"
+    method = "GET"
+    path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -1,0 +1,11 @@
+.git
+target
+node_modules
+**/node_modules
+dist
+sdk
+oracle_v0
+bench
+*.wasm
+.env
+.env.*
