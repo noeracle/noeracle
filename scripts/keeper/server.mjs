@@ -22,6 +22,22 @@ export function createServer(keeper, startedAt) {
 
     if (req.method !== "GET") return sendJson(405, { error: "method not allowed" });
 
+    if (url.pathname === "/") {
+      return sendJson(200, {
+        service: "Noeracle attestation service",
+        description:
+          "Pull-based price oracle for Stellar — fetch a freshly signed " +
+          "price and verify it on-chain.",
+        endpoints: {
+          "GET /health": "liveness and keeper stats",
+          "GET /v1/latest": "latest signed attestation for every asset",
+          "GET /v1/latest/:asset": "one asset, e.g. /v1/latest/BTC-USD",
+          "GET /v1/stream": "Server-Sent Events — a prices event each round",
+        },
+        repository: "https://github.com/y4hyya/Noeracle",
+      });
+    }
+
     if (url.pathname === "/health") {
       return sendJson(200, {
         status: "ok",
