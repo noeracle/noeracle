@@ -1,0 +1,21 @@
+# Build output
+target/
+*.wasm
+
+# Dependencies
+node_modules/
+
+# Secrets / local env
+.env
+.env.*
+!.env.example
+
+# OS / editor / local tooling junk
+.DS_Store
+.claude/
+
+# Strategic / funding docs — kept local, not part of the code repo
+proposals/
+DOCUMENTATION_PLAN.md
+CLAUDE.md
+decisions/

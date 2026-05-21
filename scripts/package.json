@@ -1,0 +1,21 @@
+{
+  "name": "noeracle-scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "limits": "node fetch_ledger_limits.mjs",
+    "limits:testnet": "NETWORK=testnet node fetch_ledger_limits.mjs",
+    "limits:mainnet": "NETWORK=mainnet node fetch_ledger_limits.mjs",
+    "bench:testnet": "NETWORK=testnet node run_oracle_bench.mjs",
+    "bench:mainnet": "NETWORK=mainnet node run_oracle_bench.mjs"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^14.4.3",
+    "@noble/curves": "^1.6.0",
+    "@noble/hashes": "^1.5.0",
+    "@noble/ed25519": "^2.2.0",
+    "tweetnacl": "^1.0.3",
+    "dotenv": "^17.0.0"
+  }
+}
