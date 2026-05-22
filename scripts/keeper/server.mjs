@@ -14,6 +14,19 @@ export function createServer(keeper, startedAt) {
 
   const httpServer = http.createServer((req, res) => {
     const url = new URL(req.url, "http://localhost");
+
+    // Access log — one line per request once the response finishes. /health
+    // is skipped; Fly and the uptime monitor poll it constantly.
+    const reqStart = Date.now();
+    res.on("finish", () => {
+      if (url.pathname !== "/health") {
+        console.log(
+          `[req] ${req.method} ${url.pathname} → ${res.statusCode} ` +
+            `${Date.now() - reqStart}ms`,
+        );
+      }
+    });
+
     const sendJson = (code, body) => {
       res.writeHead(code, {
         "content-type": "application/json",
@@ -70,7 +83,11 @@ export function createServer(keeper, startedAt) {
       // Send the current snapshot immediately, then stream every round.
       res.write(`event: prices\ndata: ${JSON.stringify({ assets: keeper.getAll() })}\n\n`);
       sseClients.add(res);
-      req.on("close", () => sseClients.delete(res));
+      console.log(`[sse] connect — ${sseClients.size} client(s)`);
+      req.on("close", () => {
+        sseClients.delete(res);
+        console.log(`[sse] disconnect — ${sseClients.size} client(s)`);
+      });
       return;
     }
 

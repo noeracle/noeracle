@@ -30,6 +30,27 @@ const startedAt = Date.now();
 
 const { httpServer, broadcast } = createServer(keeper, startedAt);
 
+// Crash guards — log the cause, then exit so Fly restarts the machine.
+process.on("uncaughtException", (err) => {
+  console.error("[fatal] uncaughtException:", err);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[fatal] unhandledRejection:", reason);
+  process.exit(1);
+});
+
+// Graceful shutdown — Fly sends SIGTERM on deploy/restart. Stop accepting
+// requests, drop open connections (including SSE), and exit cleanly.
+for (const sig of ["SIGTERM", "SIGINT"]) {
+  process.on(sig, () => {
+    console.log(`[shutdown] ${sig} — closing server`);
+    httpServer.close(() => process.exit(0));
+    httpServer.closeAllConnections?.();
+    setTimeout(() => process.exit(0), 3000).unref();
+  });
+}
+
 async function loop() {
   const t0 = Date.now();
   try {
