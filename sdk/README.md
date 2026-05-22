@@ -1,6 +1,6 @@
 # @noeracle/sdk
 
-TypeScript SDK for [Noeracle](https://github.com/y4hyya/Noeracle) — the
+TypeScript SDK for [Noeracle](https://github.com/noeracle/noeracle) — the
 pull-based price oracle on Stellar.
 
 Fetch a freshly signed price off-chain and bundle its on-chain verification

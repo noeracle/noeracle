@@ -49,7 +49,7 @@ export function createServer(keeper, startedAt) {
           "GET /v1/latest/:asset": "one asset, e.g. /v1/latest/BTC-USD",
           "GET /v1/stream": "Server-Sent Events — a prices event each round",
         },
-        repository: "https://github.com/y4hyya/Noeracle",
+        repository: "https://github.com/noeracle/noeracle",
       });
     }
 
