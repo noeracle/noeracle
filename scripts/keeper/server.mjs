@@ -1,11 +1,13 @@
 // HTTP + SSE surface for the attestation service:
-//   GET /health            — liveness + keeper stats
+//   GET /health            — liveness + staleness (HTTP 503 when stalled)
 //   GET /v1/latest         — latest signed attestation for every asset
 //   GET /v1/latest/:asset  — latest signed attestation for one asset
 //                            (asset path uses '-' for '/', e.g. BTC-USD)
 //   GET /v1/stream         — Server-Sent Events: a `prices` event each round
 
 import http from "node:http";
+
+import { HEALTH_STALENESS_S } from "./config.mjs";
 
 export function createServer(keeper, startedAt) {
   const sseClients = new Set();
@@ -29,7 +31,7 @@ export function createServer(keeper, startedAt) {
           "Pull-based price oracle for Stellar — fetch a freshly signed " +
           "price and verify it on-chain.",
         endpoints: {
-          "GET /health": "liveness and keeper stats",
+          "GET /health": "liveness and staleness — HTTP 503 when not signing",
           "GET /v1/latest": "latest signed attestation for every asset",
           "GET /v1/latest/:asset": "one asset, e.g. /v1/latest/BTC-USD",
           "GET /v1/stream": "Server-Sent Events — a prices event each round",
@@ -39,11 +41,18 @@ export function createServer(keeper, startedAt) {
     }
 
     if (url.pathname === "/health") {
-      return sendJson(200, {
-        status: "ok",
+      const stats = keeper.stats();
+      // Fail the check (HTTP 503) when the keeper is up but no longer signing
+      // fresh rounds — a stale `last_signed_age_s`, or nothing signed yet. Fly
+      // then restarts the machine and uptime monitors alert.
+      const healthy =
+        stats.last_signed_age_s !== null &&
+        stats.last_signed_age_s <= HEALTH_STALENESS_S;
+      return sendJson(healthy ? 200 : 503, {
+        status: healthy ? "ok" : "degraded",
         uptime_s: Math.floor((Date.now() - startedAt) / 1000),
         sse_clients: sseClients.size,
-        ...keeper.stats(),
+        ...stats,
       });
     }
 

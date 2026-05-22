@@ -20,7 +20,7 @@ repo-root `.env`. Optional `KEEPER_PORT` (default 8080).
 | Route | Description |
 |-------|-------------|
 | `GET /` | Service info and the endpoint list |
-| `GET /health` | Liveness, poll count, live asset count, publisher key |
+| `GET /health` | Liveness and staleness — `200` healthy, `503` once the keeper stops signing fresh rounds. Reports uptime, poll count, live asset count, freshest-attestation age, publisher |
 | `GET /v1/latest` | Latest signed attestation for every asset |
 | `GET /v1/latest/:asset` | Latest signed attestation for one asset (`BTC-USD`, `ETH-USD`, …) |
 | `GET /v1/stream` | Server-Sent Events — a `prices` event every signing round |

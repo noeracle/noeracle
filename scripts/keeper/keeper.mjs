@@ -68,10 +68,20 @@ export function createKeeper(secretKeyHex) {
     pollOnce,
     getLatest: (asset) => latest[asset] || null,
     getAll: () => latest,
-    stats: () => ({
-      polls,
-      assets_live: Object.keys(latest).length,
-      publisher,
-    }),
+    stats: () => {
+      // Age of the freshest signed attestation, in seconds — the signal for
+      // a keeper that is running but no longer signing. null before the first
+      // successful round.
+      const timestamps = Object.values(latest).map((a) => a.timestamp);
+      const lastSignedAgeS = timestamps.length
+        ? Math.floor(Date.now() / 1000) - Math.max(...timestamps)
+        : null;
+      return {
+        polls,
+        assets_live: Object.keys(latest).length,
+        publisher,
+        last_signed_age_s: lastSignedAgeS,
+      };
+    },
   };
 }

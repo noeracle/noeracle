@@ -52,4 +52,10 @@ export const STALENESS_MS = 5_000;
 // (only applied when at least 3 sources are present).
 export const OUTLIER_STDDEV = 3;
 
+// /health reports "degraded" (HTTP 503) once the freshest signed attestation
+// is older than this — the keeper is up but no longer signing, so Fly restarts
+// the machine and uptime monitors fire. 10 s ≈ 20 missed rounds: wide enough
+// not to trip on a brief exchange hiccup.
+export const HEALTH_STALENESS_S = 10;
+
 export const PORT = Number(process.env.KEEPER_PORT || 8080);
