@@ -14,7 +14,7 @@ import {
 } from "./errors.js";
 import { streamSse } from "./stream.js";
 
-const DEFAULT_ATTESTATION_URL = "https://noeracle.fly.dev";
+const DEFAULT_ATTESTATION_URL = "https://api.noeracle.org";
 
 /** Fresh signed prices, ready to bundle into a Stellar transaction. */
 export class Fresh {

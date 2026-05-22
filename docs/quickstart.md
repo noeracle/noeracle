@@ -32,7 +32,7 @@ contract. Both patterns are in the [integration guide](integration.md).
 | | |
 |---|---|
 | Oracle contract | `CAYIP67UDVX5UPXGN3XDAWVIEFBAVG6G7LUESEOU3NUQKTWN55W34YBG` |
-| Attestation service | `https://noeracle.fly.dev` |
+| Attestation service | `https://api.noeracle.org` |
 | Assets | BTC/USD, ETH/USD, XLM/USD, USDC/USD |
 
 Runnable worked examples: [`sdk/examples/`](../sdk/examples/).

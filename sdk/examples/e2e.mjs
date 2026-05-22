@@ -36,7 +36,7 @@ const env = Object.fromEntries(
 );
 const CONTRACT_ID = env.TESTNET_ORACLE_V0;
 const SOURCE = Keypair.fromSecret(env.NOERACLE_ADMIN_SECRET);
-const KEEPER_URL = process.env.KEEPER_URL || "https://noeracle.fly.dev";
+const KEEPER_URL = process.env.KEEPER_URL || "https://api.noeracle.org";
 const server = new rpc.Server(env.TESTNET_RPC || "https://soroban-testnet.stellar.org");
 
 async function main() {

@@ -1,6 +1,6 @@
 {
   "name": "@noeracle/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript SDK for the Noeracle pull-based price oracle on Stellar",
   "license": "MIT",
   "type": "module",
@@ -12,13 +12,22 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "demo": "node examples/e2e.mjs",
     "prepublishOnly": "tsc"
   },
-  "keywords": ["stellar", "soroban", "oracle", "price-feed", "pull-oracle"],
+  "keywords": [
+    "stellar",
+    "soroban",
+    "oracle",
+    "price-feed",
+    "pull-oracle"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/y4hyya/Noeracle.git"

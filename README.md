@@ -17,7 +17,7 @@ oracle-priced AMM swaps require.
 
 - **Network:** Stellar Testnet
 - **Contract:** [`CAYIP67UDVX5UPXGN3XDAWVIEFBAVG6G7LUESEOU3NUQKTWN55W34YBG`](https://stellar.expert/explorer/testnet/contract/CAYIP67UDVX5UPXGN3XDAWVIEFBAVG6G7LUESEOU3NUQKTWN55W34YBG)
-- **Attestation service:** https://noeracle.fly.dev
+- **Attestation service:** https://api.noeracle.org
 
 v0 runs a single self-operated signer and has not been independently audited.
 Its purpose is to validate the architecture and ground signature-scheme and

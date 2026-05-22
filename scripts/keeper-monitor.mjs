@@ -14,7 +14,7 @@
 // Local dry run (prints instead of sending; hits the live service):
 //   DRY_RUN=1 node scripts/keeper-monitor.mjs
 
-const MONITOR_URL = (process.env.MONITOR_URL || "https://noeracle.fly.dev")
+const MONITOR_URL = (process.env.MONITOR_URL || "https://api.noeracle.org")
   .replace(/\/+$/, "");
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
