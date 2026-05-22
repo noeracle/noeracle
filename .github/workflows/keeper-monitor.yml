@@ -1,0 +1,41 @@
+# Noeracle keeper monitor.
+#
+# Polls the attestation service's /health from GitHub's infrastructure — outside
+# Fly — so it can still alert when the keeper or its machine is down. Sends to
+# Telegram: a down/degraded alert (checked every 10 min) and a healthy status
+# digest (every 6 hours).
+#
+# One-time setup — add two repository secrets, under
+# Settings -> Secrets and variables -> Actions:
+#   TELEGRAM_BOT_TOKEN  from @BotFather (/newbot)
+#   TELEGRAM_CHAT_ID    the target chat id (message the bot, then read it from
+#                       https://api.telegram.org/bot<token>/getUpdates)
+#
+# Test it any time: Actions -> keeper-monitor -> Run workflow (always sends a
+# digest). Heartbeat and manual runs need the secrets; they fail loudly if the
+# secrets are missing.
+
+name: keeper-monitor
+
+on:
+  schedule:
+    - cron: "*/10 * * * *" # every 10 min — alert if the keeper is unhealthy
+    - cron: "5 */6 * * *" # every 6 h — send a healthy status digest
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check keeper health, notify Telegram
+        run: node scripts/keeper-monitor.mjs
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GH_EVENT_NAME: ${{ github.event_name }}
+          GH_SCHEDULE: ${{ github.event.schedule }}
