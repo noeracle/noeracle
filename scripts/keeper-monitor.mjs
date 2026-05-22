@@ -37,6 +37,10 @@ function errText(err) {
   return err.cause?.code || err.cause?.message || err.message || String(err);
 }
 
+// Escape the few free-text fields that go into an HTML-parsed message.
+const esc = (s) =>
+  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
 // One probe of /health — normalized result, never throws.
 async function probe() {
   try {
@@ -90,12 +94,13 @@ function humanDuration(s) {
 function stamp() {
   const t = new Date().toLocaleString("en-GB", {
     timeZone: "Europe/Istanbul",
-    day: "2-digit",
+    day: "numeric",
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
   });
-  return `${t} (UTC+3)`;
+  // en-GB renders "22 May, 18:21" — drop the comma for a cleaner footer.
+  return `${t.replace(",", "")} · UTC+3`;
 }
 
 function fmtPrice(n) {
@@ -119,7 +124,7 @@ async function priceLine() {
     if (!res.ok) return null;
     const { assets } = await res.json();
     const parts = Object.values(assets || {}).map(
-      (a) => `${a.asset.split("/")[0]} ${fmtPrice(a.price_human)}`,
+      (a) => `${a.asset.split("/")[0]} $${fmtPrice(a.price_human)}`,
     );
     return parts.length ? parts.join(" · ") : null;
   } catch {
@@ -129,42 +134,42 @@ async function priceLine() {
 
 async function healthyMessage(body) {
   const prices = await priceLine();
-  return [
-    "✅ Noeracle healthy",
-    `uptime ${humanDuration(body.uptime_s)} · ${body.assets_live}/4 assets · ` +
-      `last signed ${body.last_signed_age_s ?? "?"}s`,
-    `polls ${Number(body.polls).toLocaleString("en-US")}`,
-    prices,
-    stamp(),
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const lines = [
+    "✅ <b>Noeracle healthy</b>",
+    "",
+    `Uptime — ${humanDuration(body.uptime_s)}`,
+    `Assets — ${body.assets_live}/4 live`,
+    `Last signed — ${body.last_signed_age_s ?? "?"}s ago`,
+    `Polls — ${Number(body.polls).toLocaleString("en-US")}`,
+  ];
+  if (prices) lines.push("", prices);
+  lines.push("", `<i>${stamp()}</i>`);
+  return lines.join("\n");
 }
 
 function problemMessage({ result: r, attempts }) {
+  let head = "🔴 <b>Noeracle DOWN</b>";
   const lines = [];
-  let head = "🔴 Noeracle DOWN";
 
   if (!r.reached) {
-    lines.push(`${MONITOR_URL}/health unreachable`);
-    lines.push(`error: ${r.error}`);
+    lines.push("Health — unreachable");
+    lines.push(`Error — ${esc(r.error)}`);
   } else if (r.http !== 200) {
-    const status = r.body && r.body.status ? ` (${r.body.status})` : "";
-    lines.push(`/health → HTTP ${r.http}${status}`);
+    const status = r.body && r.body.status ? ` (${esc(r.body.status)})` : "";
+    lines.push(`Health — HTTP ${r.http}${status}`);
     if (r.body && r.body.last_signed_age_s !== undefined) {
-      lines.push(
-        `last signed ${r.body.last_signed_age_s ?? "?"}s · ` +
-          `${r.body.assets_live ?? "?"}/4 assets live`,
-      );
+      lines.push(`Last signed — ${r.body.last_signed_age_s ?? "?"}s ago`);
+      lines.push(`Assets — ${r.body.assets_live ?? "?"}/4 live`);
     }
   } else {
     // HTTP 200 but not fully healthy — a partial degradation.
-    head = "🟠 Noeracle degraded";
-    lines.push(`/health OK but ${r.body?.assets_live ?? "?"}/4 assets live`);
-    lines.push(`last signed ${r.body?.last_signed_age_s ?? "?"}s`);
+    head = "🟠 <b>Noeracle degraded</b>";
+    lines.push(`Health — HTTP 200, ${r.body?.assets_live ?? "?"}/4 assets live`);
+    lines.push(`Last signed — ${r.body?.last_signed_age_s ?? "?"}s ago`);
   }
-  lines.push(`checked ${attempts}× · ${stamp()}`);
-  return [head, ...lines].join("\n");
+  lines.push(`Checks — ${attempts} attempts`);
+
+  return [head, "", ...lines, "", `<i>${stamp()}</i>`].join("\n");
 }
 
 async function sendTelegram(text) {
@@ -184,6 +189,7 @@ async function sendTelegram(text) {
     body: JSON.stringify({
       chat_id: CHAT_ID,
       text,
+      parse_mode: "HTML",
       disable_web_page_preview: true,
     }),
     signal: AbortSignal.timeout(10_000),
