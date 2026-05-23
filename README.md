@@ -6,9 +6,9 @@ complement Reflector's push-based oracle.
 A consumer fetches a freshly signed price attestation off-chain and bundles a
 verification operation into its own Stellar transaction. The Soroban contract
 verifies the publisher signature, checks freshness, and stores the price, so
-the consumer's application logic executes against a price signed sub-second
-before the transaction — rather than against pre-warmed on-chain state. This
-is the freshness model that perpetual-DEX execution, lending liquidations, and
+the consumer's application logic executes against a price signed within the
+last 2 seconds — rather than against pre-warmed on-chain state. This is the
+freshness model that perpetual-DEX execution, lending liquidations, and
 oracle-priced AMM swaps require.
 
 ## Status

@@ -7,6 +7,11 @@ export interface NoeracleConfig {
   attestationUrl?: string;
   /** Default oracle contract id, used when `toUpdateOp` is called with none. */
   contractId?: string;
+  /**
+   * Maximum age (in seconds) of a fetched attestation before `fetchLatest`
+   * throws `StalePriceError`. Matches the v0 testnet SLA. Default: 2.
+   */
+  freshnessLimitSeconds?: number;
 }
 
 /** A signed price attestation, exactly as served by the attestation service. */

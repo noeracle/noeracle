@@ -4,8 +4,8 @@ TypeScript SDK for [Noeracle](https://github.com/noeracle/noeracle) — the
 pull-based price oracle on Stellar.
 
 Fetch a freshly signed price off-chain and bundle its on-chain verification
-into your own transaction, so your contract executes against a
-sub-second-fresh price rather than pre-warmed state.
+into your own transaction, so your contract executes against a price signed
+within the last 2 seconds rather than pre-warmed state.
 
 ## Install
 

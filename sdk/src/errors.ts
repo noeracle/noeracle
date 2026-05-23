@@ -32,3 +32,19 @@ export class InconsistentRoundError extends NoeracleError {
     this.name = "InconsistentRoundError";
   }
 }
+
+/** A fetched attestation is older than the configured freshness limit. */
+export class StalePriceError extends NoeracleError {
+  constructor(
+    public readonly asset: string,
+    public readonly signedAt: number,
+    public readonly observedAt: number,
+  ) {
+    super(
+      `price for ${asset} is ${observedAt - signedAt}s old at fetch ` +
+        `(signed ${signedAt}, observed ${observedAt}); the attestation ` +
+        `service may be lagging or the client clock is skewed`,
+    );
+    this.name = "StalePriceError";
+  }
+}

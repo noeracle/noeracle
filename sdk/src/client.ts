@@ -11,6 +11,7 @@ import {
   AttestationServiceError,
   InconsistentRoundError,
   NoeracleError,
+  StalePriceError,
 } from "./errors.js";
 import { streamSse } from "./stream.js";
 
@@ -102,6 +103,7 @@ export class Noeracle {
   readonly network: Network;
   private readonly attestationUrl: string;
   private readonly contractId?: string;
+  private readonly freshnessLimitSeconds: number;
 
   constructor(config: NoeracleConfig = {}) {
     this.network = config.network ?? "testnet";
@@ -109,6 +111,7 @@ export class Noeracle {
       config.attestationUrl ?? DEFAULT_ATTESTATION_URL
     ).replace(/\/+$/, "");
     this.contractId = config.contractId;
+    this.freshnessLimitSeconds = config.freshnessLimitSeconds ?? 2;
   }
 
   /**
@@ -145,6 +148,16 @@ export class Noeracle {
       if (!att) throw new AssetUnavailableError(asset);
       return att;
     });
+
+    // Reject if any returned attestation is older than the configured freshness
+    // limit (default 2 s, matching the v0 testnet SLA).
+    const nowS = Math.floor(Date.now() / 1000);
+    for (const att of picked) {
+      if (nowS - att.timestamp > this.freshnessLimitSeconds) {
+        throw new StalePriceError(att.asset, att.timestamp, nowS);
+      }
+    }
+
     return new Fresh(picked, this.contractId);
   }
 

@@ -37,10 +37,12 @@ export const WEIGHTS = {
   bybit: 1,
 };
 
-// Poll cadence and the round-id window (both 500 ms — see ADR 007:
+// Poll cadence and the round-id window (both 2 s — see ADR 007:
 // round_id = floor(unix_ms / ROUND_WINDOW_MS), deterministic and monotonic).
-export const POLL_INTERVAL_MS = 500;
-export const ROUND_WINDOW_MS = 500;
+// Matches the published v0 testnet SLA: a fetched attestation is signed
+// within the last 2 seconds. Tightens on mainnet alongside paid infra.
+export const POLL_INTERVAL_MS = 2_000;
+export const ROUND_WINDOW_MS = 2_000;
 
 // i128 price precision: scale floats by 1e7 (Stellar's standard precision).
 export const PRICE_SCALE = 10_000_000;
