@@ -1,0 +1,33 @@
+# Noeracle SLA check.
+#
+# Verifies the attestation service is meeting its v0 testnet SLA:
+#   - every fetched attestation is signed within 2 seconds
+#   - every asset has at least 3 of 5 exchange sources contributing
+#
+# Runs hourly from GitHub Actions. Silent on success; posts to Telegram only
+# when an SLA breach is detected (or the service is unreachable). Reuses the
+# TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID secrets configured for keeper-monitor.
+#
+# Test manually: Actions -> sla-check -> Run workflow.
+
+name: sla-check
+
+on:
+  schedule:
+    - cron: "0 * * * *" # every hour, on the hour
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify attestation freshness SLA
+        run: node scripts/sla_check.mjs
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
