@@ -26,10 +26,9 @@ audited version is future work.
 
 ## Documentation
 
-- [Quickstart](docs/quickstart.md) — integrate in a few lines
-- [Integration guide](docs/integration.md) — off-chain and in-contract patterns, contract API, failure modes
-- [Threat model](docs/threat-model.md) — v0 trust assumptions
-- [Examples](sdk/examples/) — runnable worked examples
+Full documentation lives at **[noeracle.org/docs](https://noeracle.org/docs/)** — quickstart, integration patterns, SDK + contract reference, architecture, threat model, roadmap.
+
+For runnable code: [SDK examples](sdk/examples/) (TypeScript) and [`examples/consumer_v0/`](examples/consumer_v0/) (a Soroban consumer contract demonstrating inline oracle verification).
 
 ## Repository layout
 
@@ -37,9 +36,9 @@ audited version is future work.
 |------|------------|
 | `oracle_v0/` | The Soroban price-oracle contract (crate `noeracle_oracle_v0`). Production entrypoint: `update_batch_ed25519_args` — verifies signed prices inline in a consumer transaction. |
 | `sdk/` | `@noeracle/sdk` — the TypeScript SDK consumers integrate with. |
+| `examples/consumer_v0/` | Reference Soroban consumer contract + TS demo. Shows the inline-verification pattern (Pattern B) end-to-end against a deployed testnet instance. |
 | `scripts/` | Node code: `keeper/` is the attestation service (polls 5 exchanges, signs, serves HTTP + SSE); `run_oracle_bench.mjs` and `fetch_ledger_limits.mjs` are fee-measurement drivers. |
 | `bench/` | Soroban contract + host-emulated tests (crate `noeracle_bench`) measuring each crypto primitive — Ed25519, secp256k1, secp256r1, BLS12-381 — in isolation. The printed CPU / memory cost tables are the deliverable. |
-| `docs/` | Quickstart, integration guide, threat model. |
 
 `bench/` and `oracle_v0/` are a matched pair: `bench/` measures crypto
 primitives in the simulated host, and `scripts/run_oracle_bench.mjs` measures

@@ -1,14 +1,15 @@
-[workspace]
-resolver = "2"
-members = ["bench", "oracle_v0"]
-exclude = ["examples/consumer_v0"]
-
-[workspace.package]
+[package]
+name = "noeracle_consumer_v0_example"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+publish = false
 
-[workspace.dependencies]
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[dependencies]
 soroban-sdk = "26.0.0"
 
 [profile.release]
