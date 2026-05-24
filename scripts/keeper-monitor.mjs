@@ -59,14 +59,16 @@ async function probe() {
   }
 }
 
-// Fully healthy: HTTP 200, the keeper reports it is signing, all 4 assets live.
+// Fully healthy: HTTP 200 and the keeper reports it is signing. The keeper's
+// own /health endpoint returns 503 when staleness exceeds HEALTH_STALENESS_S,
+// so HTTP 200 + status==="ok" is sufficient — no need to anchor to a specific
+// asset count, which would false-positive every time we add a new asset.
 function isHealthy(r) {
   return (
     r.reached &&
     r.http === 200 &&
     r.body != null &&
-    r.body.status === "ok" &&
-    r.body.assets_live === 4
+    r.body.status === "ok"
   );
 }
 
@@ -138,7 +140,7 @@ async function healthyMessage(body) {
     "✅ <b>Noeracle healthy</b>",
     "",
     `Uptime — ${humanDuration(body.uptime_s)}`,
-    `Assets — ${body.assets_live}/4 live`,
+    `Assets — ${body.assets_live} live`,
     `Last signed — ${body.last_signed_age_s ?? "?"}s ago`,
     `Polls — ${Number(body.polls).toLocaleString("en-US")}`,
   ];
@@ -159,12 +161,12 @@ function problemMessage({ result: r, attempts }) {
     lines.push(`Health — HTTP ${r.http}${status}`);
     if (r.body && r.body.last_signed_age_s !== undefined) {
       lines.push(`Last signed — ${r.body.last_signed_age_s ?? "?"}s ago`);
-      lines.push(`Assets — ${r.body.assets_live ?? "?"}/4 live`);
+      lines.push(`Assets — ${r.body.assets_live ?? "?"} live`);
     }
   } else {
     // HTTP 200 but not fully healthy — a partial degradation.
     head = "🟠 <b>Noeracle degraded</b>";
-    lines.push(`Health — HTTP 200, ${r.body?.assets_live ?? "?"}/4 assets live`);
+    lines.push(`Health — HTTP 200, ${r.body?.assets_live ?? "?"} assets live`);
     lines.push(`Last signed — ${r.body?.last_signed_age_s ?? "?"}s ago`);
   }
   lines.push(`Checks — ${attempts} attempts`);
