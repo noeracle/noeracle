@@ -150,7 +150,7 @@ export class Noeracle {
     });
 
     // Reject if any returned attestation is older than the configured freshness
-    // limit (default 2 s, matching the v0 testnet SLA).
+    // limit (default 2 s — a loose upper bound; keeper signs every ~500 ms).
     const nowS = Math.floor(Date.now() / 1000);
     for (const att of picked) {
       if (nowS - att.timestamp > this.freshnessLimitSeconds) {

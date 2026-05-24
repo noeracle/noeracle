@@ -9,7 +9,8 @@ export interface NoeracleConfig {
   contractId?: string;
   /**
    * Maximum age (in seconds) of a fetched attestation before `fetchLatest`
-   * throws `StalePriceError`. Matches the v0 testnet SLA. Default: 2.
+   * throws `StalePriceError`. Default: 2 — a loose upper bound; the keeper
+   * typically signs every 500 ms, so fetched attestations are usually fresher.
    */
   freshnessLimitSeconds?: number;
 }

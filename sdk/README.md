@@ -5,7 +5,7 @@ pull-based price oracle on Stellar.
 
 Fetch a freshly signed price off-chain and bundle its on-chain verification
 into your own transaction, so your contract executes against a price signed
-within the last 2 seconds rather than pre-warmed state.
+within the last ~500 ms rather than pre-warmed state.
 
 ## Install
 
