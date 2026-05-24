@@ -26,6 +26,21 @@ export const ASSETS = {
     coinbase: "USDC-USD", binance: "USDCUSDT", kraken: "USDCUSDT",
     okx: "USDC-USDT", bybit: "USDCUSDT",
   },
+  "SOL/USD": {
+    tag8: "SOLUSD",
+    coinbase: "SOL-USDT", binance: "SOLUSDT", kraken: "SOLUSDT",
+    okx: "SOL-USDT", bybit: "SOLUSDT",
+  },
+  "XRP/USD": {
+    tag8: "XRPUSD",
+    coinbase: "XRP-USDT", binance: "XRPUSDT", kraken: "XRPUSDT",
+    okx: "XRP-USDT", bybit: "XRPUSDT",
+  },
+  "ADA/USD": {
+    tag8: "ADAUSD",
+    coinbase: "ADA-USDT", binance: "ADAUSDT", kraken: "ADAUSDT",
+    okx: "ADA-USDT", bybit: "ADAUSDT",
+  },
 };
 
 // Per-exchange weight in the aggregated price (see aggregate.mjs).
