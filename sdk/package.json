@@ -1,6 +1,6 @@
 {
   "name": "@noeracle/sdk",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "TypeScript SDK for the Noeracle pull-based price oracle on Stellar",
   "license": "MIT",
   "type": "module",
