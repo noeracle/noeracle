@@ -1,0 +1,43 @@
+---
+title: Noeracle
+description: An on-demand price oracle for Stellar. Sub-500 ms freshness, verified inside your transaction.
+slug: /
+hide_title: true
+---
+
+import { NoeracleQuickstart } from '@site/src/components/NoeracleQuickstart';
+
+# Noeracle
+
+The first **pull-based** price oracle for Stellar.
+
+A consumer fetches a freshly signed price attestation from Noeracle's off-chain service and bundles a verification operation into its own Stellar transaction. The Soroban contract verifies the publisher signature, checks freshness, and stores the price — so the consumer's application logic executes against a price signed within the last **~500 ms**, not against pre-warmed on-chain state.
+
+This is the freshness model that perpetual-DEX execution, lending liquidations, and oracle-priced AMM swaps require.
+
+<NoeracleQuickstart />
+
+## Complement to Reflector
+
+Noeracle is the complement to [Reflector](https://reflector.network), not a replacement. Reflector pre-warms on-chain state on a cadence and serves free reads — optimal for displays, anchor UIs, stablecoin mint/redeem flows, and slow rebalancing. Noeracle delivers execution-time freshness bounded by the publisher signing cadence rather than ledger close time. Some protocols use both, per use case.
+
+## Status
+
+| | |
+|---|---|
+| Version | **v0** — testnet prototype |
+| Network | Stellar Testnet |
+| Contract | [`CAYIP67UDVX5UPXGN3XDAWVIEFBAVG6G7LUESEOU3NUQKTWN55W34YBG`](https://stellar.expert/explorer/testnet/contract/CAYIP67UDVX5UPXGN3XDAWVIEFBAVG6G7LUESEOU3NUQKTWN55W34YBG) |
+| Attestation service | [`api.noeracle.org`](https://api.noeracle.org/health) |
+| Freshness SLA | sub-500 ms (testnet) |
+| Source | [`noeracle/noeracle`](https://github.com/noeracle/noeracle) |
+| Package | [`@noeracle/sdk`](https://www.npmjs.com/package/@noeracle/sdk) |
+
+v0 runs a single self-operated signer and has not been independently audited. **Not for production capital.** A multi-publisher, audited mainnet version is in active development.
+
+## Get started
+
+- [**Quickstart**](/get-started/quickstart) — integrate in under 10 lines
+- [**Integration patterns**](/integration/patterns) — every pattern with code
+- [**SDK reference**](/reference/sdk) · [**Contract reference**](/reference/contract)
+- [**Architecture**](/concepts/architecture) · [**Threat model**](/concepts/threat-model) · [**Roadmap**](/project/roadmap)

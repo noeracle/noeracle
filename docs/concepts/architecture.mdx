@@ -1,0 +1,93 @@
+---
+title: Architecture
+description: System design — data sources, attestation service, SDK, and on-chain contract.
+---
+
+# Architecture
+
+Noeracle has three components: data sources, an off-chain attestation service, and an on-chain Soroban contract. The TypeScript SDK is the seam between off-chain and on-chain.
+
+```
+                +-----------------------------------------+
+                |    Data sources (off-chain, external)   |
+                |  Coinbase / Binance / Kraken / OKX /    |
+                |  Bybit (5-source weighted average)      |
+                +-------------------+---------------------+
+                                    |
+                                    v
+                +-------------------+---------------------+
+                |    Attestation service (off-chain)      |
+                |  - polls 5 exchanges every 500 ms       |
+                |  - computes per-asset weighted average  |
+                |  - signs (asset || price || ts || round)|
+                |  - serves /v1/latest/{asset} via HTTPS  |
+                |  - exposes SSE stream for subscribers   |
+                +-------------------+---------------------+
+                                    |
+                                    | HTTP GET / SSE
+                                    v
+                +-------------------+---------------------+
+                |        Noeracle TypeScript SDK          |
+                |  noeracle.fetchLatest([assets])         |
+                |  .toUpdateOp(contractAddress)           |
+                +-------------------+---------------------+
+                                    |
+                                    | prepended op
+                                    v
+        +---------------------------+-----------------------------+
+        |              Consumer's Stellar transaction             |
+        |                                                         |
+        |  op_1: oracle.update_batch_ed25519_args(signed_prices)  |
+        |  op_2: <consumer's own application logic>               |
+        +---------------------------+-----------------------------+
+                                    |
+                                    v
+                +-------------------+---------------------+
+                |    Soroban contract (on-chain)          |
+                |  - verify publisher signatures          |
+                |  - check staleness + monotonic round_id |
+                |  - write PriceEntry to temp storage     |
+                |  - return to op_2 (same tx) for use     |
+                +-----------------------------------------+
+```
+
+## Why pull-only
+
+A pull oracle gives the consumer a signed price at fetch time and bundles the verification into the consumer's own transaction. The price the consumer's application logic executes against was signed at most ~500 ms before fetch — bounded by the publisher signing cadence, not by ledger close time.
+
+A push oracle pre-warms on-chain state on a cadence. The freshness a consumer can act on is bounded by the publish interval and by ledger close time.
+
+The categories don't overlap:
+
+- **Push (Reflector's category):** displays, anchor UIs, stablecoin mint/redeem flows, slow rebalancing
+- **Pull (Noeracle's category):** perp execution, lending liquidations, oracle-priced AMM swaps, options pricing
+
+Noeracle does not run a keeper that pushes to the contract. On-chain state is warmed only as a side effect of consumer pull-mode transactions.
+
+## Freshness layers
+
+| Layer | Bound |
+|---|---|
+| Attestation service signs | Every 500 ms |
+| SDK rejects at fetch | Signed > 2 seconds before fetch (configurable via `freshnessLimitSeconds`) → `StalePriceError` |
+| Contract rejects at execution | Signed > 60 seconds before ledger close → `Error::StalePrice` |
+
+The 60-second on-chain backstop exists because Stellar ledger close time is ~5 seconds. A tighter window at the contract layer would reject legitimate transactions whose only delay was the ledger close itself. It is the safety net, not the SLA.
+
+## Why Ed25519
+
+Ed25519 was selected as the production signature scheme based on measured Soroban host cost. It is approximately 5.5× cheaper than `secp256k1_recover` and 7× cheaper than `secp256r1_verify` in CPU instruction cost. BLS12-381 aggregate signatures remain a future option for high-publisher-count sets.
+
+Measurements are reproducible via `cargo test -p noeracle_bench -- --nocapture` and validated end-to-end against real testnet/mainnet fees in [`scripts/run_oracle_bench.mjs`](https://github.com/noeracle/noeracle/blob/main/scripts/run_oracle_bench.mjs).
+
+## Replay protection
+
+Two checks inside the contract entrypoint prevent abuse on the pull path:
+
+- **Staleness window.** Reject if `env.ledger().timestamp() - timestamp > 60`. Prevents replay of stale signed prices.
+- **Monotonic `round_id`.** Advance the stored entry only when the incoming round is newer than what's stored. Lagging rounds are silent no-ops — they never fail the consumer's transaction.
+
+## See also
+
+- [**Threat model**](/concepts/threat-model) — v0 trust assumptions, attack surface, mitigations
+- [**Roadmap**](/project/roadmap) — v0 → v1 → v2 → v3

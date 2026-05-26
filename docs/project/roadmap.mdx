@@ -1,0 +1,46 @@
+---
+title: Roadmap
+description: v0 → v1 → v2 → v3.
+---
+
+# Roadmap
+
+## v0 — testnet prototype (now)
+
+Single self-operated signer. Single admin key. Single attestation service. Testnet only. Not for production capital.
+
+- Soroban contract deployed and hardened on testnet
+- Attestation service live at `api.noeracle.org` with staleness-aware health check
+- TypeScript SDK published as `@noeracle/sdk`
+- Cross-language signed-message conformance test
+- Telegram-based external uptime monitor
+
+## v1 — production multi-publisher oracle
+
+Audited, threshold-signed, mainnet.
+
+- 3-of-5 Ed25519 threshold publisher set (2 self-operated, 3 external)
+- Independent security audit
+- Admin multi-sig distinct from publisher set
+- Mainnet deployment with public monitoring
+- Three production protocol integrations
+
+## v2 — RWA data primitives
+
+- FX feeds with regulated source attribution (USD, EUR, JPY, GBP, TRY, BRL)
+- Proof-of-reserves attestation primitive for anchored and tokenized assets
+- NAV publication for tokenized funds
+- Signed-TWAP attestation type for lending-style consumers
+- Asset Inclusion Policy formalized and published
+
+## v3 — decentralization and sustainability
+
+- Stake-backed publisher set with slashing for misreporting and downtime
+- Commodity and equity feeds (gold, silver, oil, major equity indices)
+- Multi-sig governance with rotating publisher / consumer / ecosystem representatives
+- Premium subscription tier for RWA issuers covering ongoing operating cost
+
+## See also
+
+- [**Architecture**](/concepts/architecture) — v0 system design
+- [**Threat model**](/concepts/threat-model) — v0 trust assumptions and what arrives in v1

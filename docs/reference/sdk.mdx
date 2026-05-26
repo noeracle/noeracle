@@ -1,0 +1,110 @@
+---
+title: SDK reference
+description: The @noeracle/sdk TypeScript client — methods, types, and errors.
+---
+
+# SDK reference
+
+`@noeracle/sdk` — the TypeScript client for Noeracle.
+
+## Install
+
+```bash
+npm install @noeracle/sdk @stellar/stellar-sdk
+```
+
+## `new Noeracle(config?)`
+
+| Field | Type | Default | Purpose |
+|---|---|---|---|
+| `network` | `"testnet" \| "mainnet"` | `"testnet"` | Stellar network the oracle contract is deployed on |
+| `attestationUrl` | `string` | `https://api.noeracle.org` | Override the attestation service base URL |
+| `contractId` | `string` | — | Default oracle contract id, used when `toUpdateOp` is called with none |
+| `freshnessLimitSeconds` | `number` | `2` | Maximum age (in seconds) of a fetched attestation before `fetchLatest` throws `StalePriceError` |
+
+## `fetchLatest(assets)`
+
+```ts
+oracle.fetchLatest(assets: string[]): Promise<Fresh>
+```
+
+Fetches the latest signed attestation for each requested asset from a single consistent snapshot. All returned attestations share one round.
+
+Throws:
+
+- `AttestationServiceError` — service unreachable or non-2xx response
+- `AssetUnavailableError` — requested asset not in the current snapshot
+- `StalePriceError` — any returned attestation is older than `freshnessLimitSeconds` at fetch
+
+## `subscribe(assets, onUpdate, onError?)`
+
+```ts
+oracle.subscribe(
+  assets: string[],
+  onUpdate: (fresh: Fresh) => void,
+  onError?: (err: NoeracleError) => void,
+): Subscription
+```
+
+Opens an SSE connection that delivers a `Fresh` for the requested assets each time the attestation service signs a new round. Reconnects automatically on transient errors. Call `.close()` on the returned `Subscription` to stop.
+
+## `Fresh`
+
+Returned by `fetchLatest`. Carries the raw signed attestations and the helpers for building Soroban operations.
+
+| Member | Type | Purpose |
+|---|---|---|
+| `attestations` | `Attestation[]` | Raw signed messages, one per requested asset |
+| `prices` | `PriceEntry[]` | Decoded prices |
+| `price(asset)` | `(asset: string) => PriceEntry` | Look up the decoded price for one asset |
+| `toUpdateOp(contractId?)` | `(id?: string) => xdr.Operation` | Build the standalone `update_batch_ed25519_args` operation |
+| `updateArgs()` | `() => xdr.ScVal[]` | The six ScVal arguments for in-contract verification |
+
+`updateArgs()` returns `[assets, prices, timestamp, round_id, pubkey, sigs]`. Spread into your own contract call when using [Pattern B](/integration/patterns#pattern-b--inline-verification-inside-your-contract).
+
+## `PriceEntry`
+
+```ts
+type PriceEntry = {
+  asset: string;       // e.g. "BTC/USD"
+  price: bigint;       // i128 scaled by 1e7
+  priceHuman: number;  // decoded float
+  timestamp: number;   // unix seconds
+  roundId: number;     // monotonic per-asset
+  sources: number;     // exchanges aggregated
+};
+```
+
+## `Attestation`
+
+The raw signed attestation, exactly as served by the attestation service.
+
+```ts
+type Attestation = {
+  asset: string;
+  tag: string;
+  price: string;        // i128 scaled by 1e7, as decimal string
+  price_human: number;
+  timestamp: number;    // unix seconds
+  round_id: number;
+  sources: number;
+  publisher: string;    // Ed25519 public key, 32-byte hex
+  message: string;      // signed 40-byte payload, hex
+  signature: string;    // Ed25519 signature, 64-byte hex
+};
+```
+
+## Errors
+
+All errors extend `NoeracleError`.
+
+| Class | When thrown |
+|---|---|
+| `AttestationServiceError` | Network / non-2xx / malformed response from the attestation service |
+| `AssetUnavailableError` | Requested asset is not in the snapshot |
+| `StalePriceError` | A returned attestation is older than `freshnessLimitSeconds` |
+| `InconsistentRoundError` | Attestations in a single `Fresh` don't share one round (should not happen via `fetchLatest`) |
+
+## Source
+
+[`noeracle/noeracle` · `sdk/`](https://github.com/noeracle/noeracle/tree/main/sdk)

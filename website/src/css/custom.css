@@ -1,0 +1,314 @@
+/* =====================================================================
+   Noeracle docs theme.
+
+   Aesthetic: Daft Punk "Alive 2007" — black void, warm-yellow accent only.
+   Matches the noeracle.org landing-page identity (#050505 / #FFD166 /
+   JetBrains Mono) and layers Instrument Serif + Geist for editorial
+   readability on long documentation passages.
+
+   Fonts are loaded via Google Fonts CDN in docusaurus.config.ts headTags.
+   ===================================================================== */
+
+:root {
+  /* ---------- Brand palette (light mode — rarely used; site defaults dark) ---------- */
+  --noe-yellow:        #FFD166;
+  --noe-yellow-dim:    rgba(255, 209, 102, 0.16);
+  --noe-yellow-soft:   rgba(255, 209, 102, 0.08);
+  --noe-up:            #4ade80;
+  --noe-down:          #f87171;
+
+  /* ---------- Typography ---------- */
+  --noe-font-sans:  "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --noe-font-mono:  "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  --ifm-font-family-base:      var(--noe-font-sans);
+  --ifm-font-family-monospace: var(--noe-font-mono);
+  --ifm-heading-font-family:   var(--noe-font-sans);
+  --ifm-heading-font-weight:   700;
+
+  --ifm-color-primary:         #d8a93f;
+  --ifm-color-primary-dark:    #c0962f;
+  --ifm-color-primary-darker:  #ad872a;
+  --ifm-color-primary-darkest: #8e6f23;
+  --ifm-color-primary-light:   #e3b65a;
+  --ifm-color-primary-lighter: #e9c073;
+  --ifm-color-primary-lightest: #f0cd92;
+
+  --ifm-code-font-size: 92%;
+  --ifm-code-border-radius: 4px;
+}
+
+/* =====================================================================
+   Dark mode — the default and primary surface.
+   ===================================================================== */
+[data-theme='dark'] {
+  /* ---------- Surfaces ---------- */
+  --ifm-background-color:           #050505;
+  --ifm-background-surface-color:   #0a0a0a;
+  --ifm-navbar-background-color:    #050505;
+  --ifm-footer-background-color:    #030303;
+  --ifm-toc-border-color:           rgba(255, 255, 255, 0.07);
+
+  /* ---------- Text ---------- */
+  --ifm-color-content:        #e7e7e2;
+  --ifm-color-content-secondary: rgba(231, 231, 226, 0.62);
+  --ifm-heading-color:        #f4f4ea;
+  --ifm-navbar-link-color:    rgba(231, 231, 226, 0.78);
+  --ifm-navbar-link-hover-color: var(--noe-yellow);
+  --ifm-link-color:           var(--noe-yellow);
+  --ifm-link-hover-color:     #ffe49e;
+
+  /* ---------- Accent ---------- */
+  --ifm-color-primary:         var(--noe-yellow);
+  --ifm-color-primary-dark:    #f5c45a;
+  --ifm-color-primary-darker:  #e8b853;
+  --ifm-color-primary-darkest: #c79a3f;
+  --ifm-color-primary-light:   #ffd97a;
+  --ifm-color-primary-lighter: #ffe49e;
+  --ifm-color-primary-lightest: #fff0c2;
+
+  /* ---------- Code blocks ---------- */
+  --ifm-code-background:                rgba(255, 209, 102, 0.08);
+  --docusaurus-highlighted-code-line-bg: rgba(255, 209, 102, 0.12);
+  --prism-background-color:             #070707;
+
+  /* ---------- Sidebar / nav ---------- */
+  --ifm-menu-color:                 rgba(231, 231, 226, 0.62);
+  --ifm-menu-color-active:          var(--noe-yellow);
+  --ifm-menu-color-background-active: var(--noe-yellow-soft);
+  --ifm-menu-color-background-hover:  rgba(255, 255, 255, 0.03);
+
+  /* ---------- Tables ---------- */
+  --ifm-table-border-color:    rgba(255, 255, 255, 0.08);
+  --ifm-table-stripe-background: rgba(255, 255, 255, 0.02);
+  --ifm-table-head-background: rgba(255, 255, 255, 0.03);
+  --ifm-table-head-color:      rgba(231, 231, 226, 0.55);
+
+  /* ---------- Admonitions ---------- */
+  --ifm-color-info:    #93c5fd;
+  --ifm-color-success: var(--noe-up);
+  --ifm-color-warning: var(--noe-yellow);
+  --ifm-color-danger:  var(--noe-down);
+}
+
+/* =====================================================================
+   Headings — Geist Bold throughout. Tight tracking, geometric grotesque
+   register; matches the modern-dev-tool typography used by Vercel,
+   Mintlify, and the broader Stellar/EVM tooling crowd.
+   ===================================================================== */
+.markdown h1,
+article header h1 {
+  font-family: var(--noe-font-sans);
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.1;
+  font-size: clamp(34px, 4.4vw, 52px);
+  margin-top: 0;
+}
+.markdown h1 em,
+article header h1 em {
+  color: var(--noe-yellow);
+  font-style: normal;
+}
+
+.markdown h2 {
+  font-family: var(--noe-font-sans);
+  font-weight: 600;
+  letter-spacing: -0.014em;
+  line-height: 1.22;
+  font-size: clamp(24px, 3vw, 32px);
+  margin-top: 2.6rem;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.markdown h2 em {
+  color: var(--noe-yellow);
+  font-style: normal;
+}
+
+.markdown h3 {
+  font-family: var(--noe-font-sans);
+  font-weight: 600;
+  letter-spacing: -0.006em;
+  font-size: 1.18rem;
+  margin-top: 2rem;
+}
+.markdown h4 {
+  font-family: var(--noe-font-sans);
+  font-weight: 600;
+  font-size: 0.86rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(231, 231, 226, 0.78);
+  margin-top: 1.6rem;
+}
+
+/* ---------- Body copy ---------- */
+.markdown p,
+.markdown li,
+.markdown td {
+  line-height: 1.66;
+}
+
+/* ---------- Inline code ---------- */
+.markdown :not(pre) > code {
+  font-family: var(--noe-font-mono);
+  font-size: 0.92em;
+  color: var(--noe-yellow);
+  background: rgba(255, 209, 102, 0.07);
+  padding: 0.14em 0.42em;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 209, 102, 0.16);
+}
+
+/* ---------- Code blocks ---------- */
+.theme-code-block {
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--prism-background-color) !important;
+}
+.prism-code {
+  font-family: var(--noe-font-mono) !important;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+/* ---------- Tables ---------- */
+.markdown table {
+  display: table;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--ifm-table-border-color);
+}
+.markdown th {
+  font-family: var(--noe-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 500;
+  color: var(--ifm-table-head-color);
+  background: var(--ifm-table-head-background);
+}
+.markdown td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Navbar ---------- */
+.navbar {
+  backdrop-filter: blur(8px);
+  background: rgba(5, 5, 5, 0.84) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.navbar__title {
+  font-family: var(--noe-font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.navbar__link {
+  font-family: var(--noe-font-sans);
+  font-weight: 500;
+  font-size: 0.92rem;
+}
+
+/* ---------- Sidebar ---------- */
+.theme-doc-sidebar-container {
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+.menu__list-item-collapsible > .menu__link,
+.menu__list .menu__list-item:not(.menu__list-item--collapsed) > .menu__link,
+.theme-doc-sidebar-item-category-level-1 > div > a {
+  font-family: var(--noe-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(231, 231, 226, 0.42);
+  font-weight: 500;
+}
+.menu__link {
+  font-family: var(--noe-font-sans);
+  font-size: 0.9rem;
+  border-radius: 6px;
+}
+.menu__link--active,
+.menu__link--active:hover {
+  color: var(--noe-yellow) !important;
+  background: var(--noe-yellow-soft);
+  box-shadow: inset 2px 0 0 var(--noe-yellow);
+  font-weight: 500;
+}
+
+/* ---------- Pagination + breadcrumbs ---------- */
+.pagination-nav__link {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.015);
+}
+.pagination-nav__link:hover {
+  border-color: var(--noe-yellow);
+}
+.pagination-nav__sublabel {
+  color: rgba(231, 231, 226, 0.42);
+  font-family: var(--noe-font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.pagination-nav__label {
+  font-family: var(--noe-font-sans);
+  font-weight: 500;
+}
+
+/* ---------- Footer ---------- */
+.footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.footer__title {
+  font-family: var(--noe-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(231, 231, 226, 0.48);
+}
+.footer__link-item {
+  color: rgba(231, 231, 226, 0.78);
+  font-size: 0.9rem;
+}
+.footer__link-item:hover {
+  color: var(--noe-yellow);
+}
+.footer__copyright {
+  font-family: var(--noe-font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(231, 231, 226, 0.32);
+}
+
+/* ---------- TOC (right-side) ---------- */
+.table-of-contents__link {
+  font-size: 0.84rem;
+}
+.table-of-contents__link--active {
+  color: var(--noe-yellow) !important;
+}
+
+/* ---------- Selection + focus ---------- */
+::selection {
+  background: rgba(255, 209, 102, 0.22);
+  color: #fff;
+}
+:focus-visible {
+  outline: 2px solid var(--noe-yellow);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* ---------- Hide title duplication on intro page (we render an h1 manually) ---------- */
+article header h1[itemprop='headline'] {
+  /* keep visible — intro uses hide_title frontmatter already */
+}

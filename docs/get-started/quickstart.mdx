@@ -1,0 +1,55 @@
+---
+title: Quickstart
+description: Integrate Noeracle into a Soroban consumer transaction in under 10 lines of TypeScript.
+---
+
+import { NoeracleQuickstart } from '@site/src/components/NoeracleQuickstart';
+
+# Quickstart
+
+Integrate Noeracle into a Soroban consumer transaction in under 10 lines of TypeScript.
+
+## Install
+
+```bash
+npm install @noeracle/sdk @stellar/stellar-sdk
+```
+
+## Fetch a fresh price, bundle it into your transaction
+
+```ts
+import { Noeracle } from "@noeracle/sdk";
+import { TransactionBuilder, Networks } from "@stellar/stellar-sdk";
+
+const ORACLE = "CAYIP67UDVX5UPXGN3XDAWVIEFBAVG6G7LUESEOU3NUQKTWN55W34YBG";
+
+const oracle = new Noeracle({ network: "testnet" });
+const fresh = await oracle.fetchLatest(["BTC/USD"]);
+
+const tx = new TransactionBuilder(account, { fee, networkPassphrase: Networks.TESTNET })
+  .addOperation(fresh.toUpdateOp(ORACLE))
+  .addOperation(myContract.call("open_position" /* , ... */))
+  .setTimeout(30)
+  .build();
+
+await server.sendTransaction(tx);
+```
+
+## Try it live
+
+The component below calls `oracle.fetchLatest(["BTC/USD"])` against the live attestation service at `api.noeracle.org` — exactly the call your code will make.
+
+<NoeracleQuickstart />
+
+## What just happened
+
+1. The SDK fetched a price attestation signed within the last ~500 ms from `api.noeracle.org`. If the snapshot is older than 2 seconds (configurable via `freshnessLimitSeconds`), `fetchLatest` throws `StalePriceError` before your tx is built.
+2. `fresh.toUpdateOp(ORACLE)` built a Soroban operation that calls `update_batch_ed25519_args` on the Noeracle contract.
+3. The Noeracle contract verifies the publisher Ed25519 signature, confirms `pubkey` is a registered publisher, enforces a 60-second on-chain staleness backstop and a monotonic round, and writes the verified price to temporary storage.
+4. Your application operation runs in the same transaction. Read the just-verified price by calling the contract's `get_price`.
+
+## Next
+
+- [**Integration patterns**](/integration/patterns) — the in-contract verification pattern, the best-effort cache pattern, and the SSE subscribe pattern.
+- [**SDK reference**](/reference/sdk) — the full TypeScript API.
+- [**Examples**](https://github.com/noeracle/noeracle/tree/main/sdk/examples) — runnable end-to-end code.
