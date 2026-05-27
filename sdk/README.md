@@ -44,7 +44,7 @@ then reads the just-verified price via the contract's `get_price`.
 | `fresh.price(asset): PriceEntry` | One decoded price |
 
 Errors: `NoeracleError`, `AttestationServiceError`, `AssetUnavailableError`,
-`InconsistentRoundError`.
+`StalePriceError`, `InconsistentRoundError`.
 
 ## Status
 
