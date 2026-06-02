@@ -69,10 +69,20 @@ export const STALENESS_MS = 5_000;
 // (only applied when at least 3 sources are present).
 export const OUTLIER_STDDEV = 3;
 
-// /health reports "degraded" (HTTP 503) once the freshest signed attestation
-// is older than this — the keeper is up but no longer signing, so Fly restarts
-// the machine and uptime monitors fire. 10 s ≈ 20 missed rounds: wide enough
-// not to trip on a brief exchange hiccup.
+// Freshness SLA. Past this, /health reports `fresh: false` and status
+// "degraded" — but still HTTP 200, so the machine stays in the Fly load
+// balancer and keeps serving the last signed price. 10 s ≈ 20 missed rounds:
+// wide enough not to trip on a brief exchange hiccup.
 export const HEALTH_STALENESS_S = 10;
+
+// Liveness bound. Past this, /health returns 503 (Fly drops the machine from
+// rotation) AND the keeper's watchdog exits the process so Fly restarts the
+// machine — a fresh machine gets a new egress IP, which clears the exchange
+// rate-limit ban that is the usual cause of a sustained signing stall. 60 s
+// matches the on-chain staleness bound: the contract rejects any price older
+// than this, so a staler attestation is useless to serve anyway. Decoupling
+// these two bounds is deliberate — a brief stall must not black out the
+// service (return nothing); only a sustained one warrants pulling the machine.
+export const SERVE_MAX_STALENESS_S = 60;
 
 export const PORT = Number(process.env.KEEPER_PORT || 8080);

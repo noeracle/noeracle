@@ -6,7 +6,7 @@ dotenv.config({ path: new URL("../../.env", import.meta.url) });
 
 import { createKeeper } from "./keeper.mjs";
 import { createServer } from "./server.mjs";
-import { PORT, POLL_INTERVAL_MS } from "./config.mjs";
+import { PORT, POLL_INTERVAL_MS, SERVE_MAX_STALENESS_S } from "./config.mjs";
 
 const secretKeyHex = process.env.NOERACLE_PUBLISHER_SECRET_HEX;
 if (!secretKeyHex || secretKeyHex.length !== 64) {
@@ -50,6 +50,25 @@ for (const sig of ["SIGTERM", "SIGINT"]) {
     setTimeout(() => process.exit(0), 3000).unref();
   });
 }
+
+// Self-heal watchdog. A sustained signing stall on a datacenter IP almost
+// always means an exchange has rate-limit-banned this machine's egress IP —
+// which only a new IP clears. So once the freshest attestation ages past
+// SERVE_MAX_STALENESS_S, exit non-zero: Fly restarts the machine on a fresh IP
+// and signing resumes. Held off for the first 30 s so a cold boot has time to
+// land its first signed round before the watchdog can judge it.
+const WATCHDOG_GRACE_MS = 30_000;
+setInterval(() => {
+  if (Date.now() - startedAt < WATCHDOG_GRACE_MS) return;
+  const age = keeper.stats().last_signed_age_s;
+  if (age === null || age > SERVE_MAX_STALENESS_S) {
+    console.error(
+      `[watchdog] last signed ${age ?? "never"}s ago ` +
+        `(> ${SERVE_MAX_STALENESS_S}s) — exiting for a fresh-IP restart`,
+    );
+    process.exit(1);
+  }
+}, 5_000).unref();
 
 async function loop() {
   const t0 = Date.now();

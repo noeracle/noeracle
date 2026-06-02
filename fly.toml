@@ -18,9 +18,17 @@ primary_region = "fra"
   [[http_service.checks]]
     interval = "15s"
     timeout = "3s"
-    grace_period = "10s"
+    grace_period = "20s"
     method = "GET"
     path = "/health"
+
+# Restart the machine when the process exits non-zero — a crash guard
+# (uncaughtException / unhandledRejection) or the self-heal watchdog in
+# index.mjs. A restart lands the machine on a fresh egress IP, which is what
+# clears an exchange rate-limit ban.
+[[restart]]
+  policy = "on-failure"
+  max_retries = 10
 
 [[vm]]
   size = "shared-cpu-1x"

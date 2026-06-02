@@ -7,7 +7,7 @@
 
 import http from "node:http";
 
-import { HEALTH_STALENESS_S } from "./config.mjs";
+import { HEALTH_STALENESS_S, SERVE_MAX_STALENESS_S } from "./config.mjs";
 
 export function createServer(keeper, startedAt) {
   const sseClients = new Set();
@@ -55,14 +55,20 @@ export function createServer(keeper, startedAt) {
 
     if (url.pathname === "/health") {
       const stats = keeper.stats();
-      // Fail the check (HTTP 503) when the keeper is up but no longer signing
-      // fresh rounds — a stale `last_signed_age_s`, or nothing signed yet. Fly
-      // then restarts the machine and uptime monitors alert.
-      const healthy =
-        stats.last_signed_age_s !== null &&
-        stats.last_signed_age_s <= HEALTH_STALENESS_S;
-      return sendJson(healthy ? 200 : 503, {
-        status: healthy ? "ok" : "degraded",
+      const age = stats.last_signed_age_s;
+      // Liveness is decoupled from freshness. While the keeper holds a price
+      // signed within SERVE_MAX_STALENESS_S we return 200 and stay in the Fly
+      // load balancer — a pull oracle serving a slightly-stale but still
+      // cryptographically valid price beats serving nothing. We fail the check
+      // (503 → out of rotation; the watchdog then forces a fresh-IP restart)
+      // only when the keeper has never signed or is stale past the point a
+      // price is even usable on-chain.
+      const serving = age !== null && age <= SERVE_MAX_STALENESS_S;
+      const fresh = age !== null && age <= HEALTH_STALENESS_S;
+      const status = !serving ? "stalled" : fresh ? "ok" : "degraded";
+      return sendJson(serving ? 200 : 503, {
+        status,
+        fresh,
         uptime_s: Math.floor((Date.now() - startedAt) / 1000),
         sse_clients: sseClients.size,
         ...stats,
