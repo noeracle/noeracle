@@ -3,7 +3,7 @@
 # Polls the attestation service's /health from GitHub's infrastructure — outside
 # Fly — so it can still alert when the keeper or its machine is down. Sends to
 # Telegram: a down/degraded alert (checked every 10 min) and a healthy status
-# digest (every 6 hours).
+# digest (once a day).
 #
 # One-time setup — add two repository secrets, under
 # Settings -> Secrets and variables -> Actions:
@@ -20,7 +20,7 @@ name: keeper-monitor
 on:
   schedule:
     - cron: "*/10 * * * *" # every 10 min — alert if the keeper is unhealthy
-    - cron: "5 */6 * * *" # every 6 h — send a healthy status digest
+    - cron: "5 18 * * *" # 18:05 UTC daily (≈21:05 Istanbul) — healthy status digest
   workflow_dispatch:
 
 permissions:

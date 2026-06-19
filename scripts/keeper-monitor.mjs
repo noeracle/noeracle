@@ -4,8 +4,8 @@
 // or its machine is down. Polls the attestation service's /health and pushes
 // to Telegram:
 //
-//   alert mode (every 10 min):       message only when the keeper is unhealthy
-//   heartbeat  (every 6 h / manual): always send a status digest
+//   alert mode (every 10 min):        message only when the keeper is unhealthy
+//   heartbeat  (once a day / manual): always send a status digest
 //
 // Because /health returns 503 when the keeper stalls, a single check — "is
 // /health 200 with 4 assets live?" — catches a crashed process, a dead
@@ -22,11 +22,15 @@ const DRY_RUN = !!process.env.DRY_RUN;
 const RETRY_DELAY_MS = Number(process.env.RETRY_DELAY_MS || 10_000);
 const ATTEMPTS = 3;
 
-// Heartbeat on a manual run or the 6-hour cron; alert-only otherwise. With no
-// GitHub env set (a local run) default to heartbeat so a dry run always prints.
+// Heartbeat on a manual run or the daily digest cron; alert-only on the 10-min
+// check. Keying off "a scheduled run that is NOT the alert cron" lets the digest
+// time change in keeper-monitor.yml without editing this file. With no GitHub
+// env set (a local run) default to heartbeat so a dry run always prints.
+const ALERT_CRON = "*/10 * * * *";
 const HEARTBEAT =
   process.env.GH_EVENT_NAME === "workflow_dispatch" ||
-  process.env.GH_SCHEDULE === "5 */6 * * *" ||
+  (process.env.GH_EVENT_NAME === "schedule" &&
+    process.env.GH_SCHEDULE !== ALERT_CRON) ||
   !process.env.GH_EVENT_NAME;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
