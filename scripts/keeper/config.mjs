@@ -2,8 +2,22 @@
 //
 // Each asset carries its 8-byte on-chain tag and the per-exchange ticker
 // symbol used to fetch its spot price. Pairs are USDT-quoted wherever the
-// venue lists one; Kraken XLM and Coinbase USDC fall back to USD, as neither
-// venue lists a USDT pair for that asset.
+// venue lists one, falling back to the venue's USD book otherwise (the
+// aggregate treats USDT parity as USD — spreads between the two stay well
+// inside the cross-venue spread).
+//
+// Venue symbol conventions:
+//   - kraken:   CANONICAL pair names, exactly as returned by the batch
+//               Ticker endpoint (legacy pairs differ from their altname,
+//               e.g. XLMUSD -> XXLMZUSD, ZECUSD -> XZECZUSD; look new ones
+//               up in /0/public/AssetPairs: result key = canonical,
+//               `altname` = the human name).
+//   - coinbase: Advanced Trade product ids (BASE-QUOTE).
+//   - binance / bybit: concatenated spot symbols; okx: BASE-QUOTE instId.
+//
+// An asset omits a venue that does not list it (e.g. TRX on Coinbase); the
+// aggregator simply works with the venues that remain. Keep every asset on
+// at least 3 venues so outlier rejection stays meaningful.
 
 export const ASSETS = {
   "BTC/USD": {
@@ -18,7 +32,7 @@ export const ASSETS = {
   },
   "XLM/USD": {
     tag8: "XLMUSD",
-    coinbase: "XLM-USDT", binance: "XLMUSDT", kraken: "XLMUSD",
+    coinbase: "XLM-USDT", binance: "XLMUSDT", kraken: "XXLMZUSD",
     okx: "XLM-USDT", bybit: "XLMUSDT",
   },
   "USDC/USD": {
@@ -40,6 +54,46 @@ export const ASSETS = {
     tag8: "ADAUSD",
     coinbase: "ADA-USDT", binance: "ADAUSDT", kraken: "ADAUSDT",
     okx: "ADA-USDT", bybit: "ADAUSDT",
+  },
+  "BNB/USD": {
+    tag8: "BNBUSD",
+    coinbase: "BNB-USD", binance: "BNBUSDT", kraken: "BNBUSDT",
+    okx: "BNB-USDT", bybit: "BNBUSDT",
+  },
+  "TRX/USD": {
+    tag8: "TRXUSD",
+    binance: "TRXUSDT", kraken: "TRXUSD",
+    okx: "TRX-USDT", bybit: "TRXUSDT",
+  },
+  "HYPE/USD": {
+    tag8: "HYPEUSD",
+    coinbase: "HYPE-USD", kraken: "HYPEUSD",
+    okx: "HYPE-USDT", bybit: "HYPEUSDT",
+  },
+  "DOGE/USD": {
+    tag8: "DOGEUSD",
+    coinbase: "DOGE-USDT", binance: "DOGEUSDT", kraken: "XDGUSDT",
+    okx: "DOGE-USDT", bybit: "DOGEUSDT",
+  },
+  "ZEC/USD": {
+    tag8: "ZECUSD",
+    coinbase: "ZEC-USD", binance: "ZECUSDT", kraken: "XZECZUSD",
+    okx: "ZEC-USDT",
+  },
+  "LINK/USD": {
+    tag8: "LINKUSD",
+    coinbase: "LINK-USDT", binance: "LINKUSDT", kraken: "LINKUSDT",
+    okx: "LINK-USDT", bybit: "LINKUSDT",
+  },
+  "BCH/USD": {
+    tag8: "BCHUSD",
+    coinbase: "BCH-USD", binance: "BCHUSDT", kraken: "BCHUSDT",
+    okx: "BCH-USDT", bybit: "BCHUSDT",
+  },
+  "LTC/USD": {
+    tag8: "LTCUSD",
+    coinbase: "LTC-USD", binance: "LTCUSDT", kraken: "LTCUSDT",
+    okx: "LTC-USDT", bybit: "LTCUSDT",
   },
 };
 

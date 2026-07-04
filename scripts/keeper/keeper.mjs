@@ -4,7 +4,7 @@
 import {
   ASSETS, ROUND_WINDOW_MS, PRICE_SCALE, STALENESS_MS, OUTLIER_STDDEV, WEIGHTS,
 } from "./config.mjs";
-import { EXCHANGES, fetchPrice } from "./exchanges.mjs";
+import { EXCHANGES, fetchAll } from "./exchanges.mjs";
 import { aggregate } from "./aggregate.mjs";
 import { buildMessage, sign, publicKeyHex } from "./message.mjs";
 
@@ -14,21 +14,34 @@ export function createKeeper(secretKeyHex) {
   const latest = {};  // latest[asset]            = attestation object
   for (const asset of Object.keys(ASSETS)) samples[asset] = {};
 
+  // Per-exchange view of the asset table: the symbol list each venue is
+  // polled with, and the symbol -> asset name reverse index.
+  const perExchange = {};
+  for (const [asset, def] of Object.entries(ASSETS)) {
+    for (const ex of EXCHANGES) {
+      const symbol = def[ex.name];
+      if (!symbol) continue;
+      const entry = (perExchange[ex.name] ??= { symbols: [], bySymbol: new Map() });
+      entry.symbols.push(symbol);
+      entry.bySymbol.set(symbol, asset);
+    }
+  }
+
   let polls = 0;
 
   async function pollOnce() {
-    const jobs = [];
-    for (const [asset, def] of Object.entries(ASSETS)) {
-      for (const ex of EXCHANGES) {
-        const symbol = def[ex.name];
-        if (!symbol) continue;
-        jobs.push(
-          fetchPrice(ex, symbol).then((r) => {
-            if (r) samples[asset][ex.name] = { price: r.price, ts: r.ts };
-          }),
-        );
+    // One batched request per exchange covers every asset it lists.
+    const jobs = EXCHANGES.map(async (ex) => {
+      const wanted = perExchange[ex.name];
+      if (!wanted) return;
+      const prices = await fetchAll(ex, wanted.symbols);
+      if (!prices) return;
+      const ts = Date.now();
+      for (const [symbol, price] of prices) {
+        const asset = wanted.bySymbol.get(symbol);
+        if (asset) samples[asset][ex.name] = { price, ts };
       }
-    }
+    });
     await Promise.all(jobs);
 
     const now = Date.now();

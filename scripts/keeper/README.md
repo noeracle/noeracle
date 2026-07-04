@@ -49,7 +49,15 @@ consumer submits the price, `timestamp`, `round_id`, `publisher`, and
 
 ## Design
 
-- **Polling** — every 500 ms, all exchanges for all assets, in parallel.
+- **Polling** — every 500 ms, one batched spot-ticker request per exchange
+  covering all 15 assets (~10 req/s per machine, independent of asset count —
+  per-symbol polling multiplied the rate by asset count and got egress IPs
+  rate-limit banned). Binance and Kraken take the exact symbol list (Kraken
+  by canonical pair name); Coinbase serves it via the public Advanced Trade
+  products endpoint; OKX and Bybit expose no multi-symbol filter, so their
+  full spot ticker list is fetched and filtered locally. A Binance list
+  rejection (a delisted symbol 400s the whole list) falls back to the
+  all-tickers endpoint until restart.
 - **Aggregation** — stale samples (>5 s) dropped; outliers beyond 3σ dropped
   when ≥3 sources are present; exchange-weighted average of the rest
   (Binance ×3, Coinbase ×2, OKX ×2, Kraken ×1, Bybit ×1).
