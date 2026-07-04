@@ -121,7 +121,7 @@ function fmtPrice(n) {
   return n.toLocaleString("en-US", { maximumFractionDigits: 5 });
 }
 
-// The four live prices for the digest — best-effort, omitted on any failure.
+// The live price line for the digest — best-effort, omitted on any failure.
 async function priceLine() {
   try {
     const res = await fetch(`${MONITOR_URL}/v1/latest`, {

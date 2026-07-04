@@ -1,5 +1,6 @@
-// The attestation engine: polls every exchange for every asset, aggregates a
-// per-asset median, and signs it into a fresh attestation each round.
+// The attestation engine: one batched price fetch per exchange each round,
+// aggregated per asset into a weighted average and signed into a fresh
+// attestation.
 
 import {
   ASSETS, ROUND_WINDOW_MS, PRICE_SCALE, STALENESS_MS, OUTLIER_STDDEV, WEIGHTS,

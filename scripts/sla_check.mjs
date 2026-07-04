@@ -53,7 +53,7 @@ function checkAsset(asset, now) {
     fails.push(`age ${age}s > ${SLA_SECONDS}s SLA`);
   }
   if (asset.sources < MIN_SOURCES) {
-    fails.push(`only ${asset.sources}/5 sources (min ${MIN_SOURCES})`);
+    fails.push(`only ${asset.sources} sources (min ${MIN_SOURCES})`);
   }
   return fails;
 }
@@ -135,7 +135,7 @@ async function run() {
       "",
       ...breaches.map((b) => `• ${esc(b)}`),
       "",
-      `SLA — ≤${SLA_SECONDS}s freshness, ≥${MIN_SOURCES}/5 sources per asset`,
+      `SLA — ≤${SLA_SECONDS}s freshness, ≥${MIN_SOURCES} sources per asset`,
       `Endpoint — ${esc(SERVICE)}/v1/latest`,
       "",
       `<i>${stamp()}</i>`,

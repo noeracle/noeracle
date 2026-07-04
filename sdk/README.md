@@ -32,6 +32,9 @@ tx.addOperation(myContract.call("open_position" /* , ... */));
 the publisher signature on chain and stores the price. Your application op
 then reads the just-verified price via the contract's `get_price`.
 
+The public testnet service currently serves **15 USD pairs** —
+`GET https://api.noeracle.org/v1/latest` enumerates the live set.
+
 ## API
 
 | | |

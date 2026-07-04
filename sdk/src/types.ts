@@ -25,7 +25,7 @@ export interface Attestation {
   /** Unix seconds the round was signed. */
   timestamp: number;
   round_id: number;
-  /** Number of exchange sources behind the median. */
+  /** Number of exchange sources aggregated into this price. */
   sources: number;
   /** Publisher Ed25519 public key, 32-byte hex. */
   publisher: string;
@@ -45,7 +45,7 @@ export interface PriceEntry {
   /** Unix seconds the price was signed. */
   timestamp: number;
   roundId: number;
-  /** Number of exchange sources behind the median. */
+  /** Number of exchange sources aggregated into this price. */
   sources: number;
 }
 
