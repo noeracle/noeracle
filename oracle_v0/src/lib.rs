@@ -2,18 +2,26 @@
 
 //! Noeracle oracle_v0 — Soroban pull-oracle contract.
 //!
-//! `update_batch_ed25519_args` is the production pull-mode entrypoint: a
-//! consumer bundles it into their own transaction to verify a freshly signed
-//! price round inline. It checks the signer is a registered publisher, the
-//! round is fresh, and round_id is monotonic. The other `update_*` entrypoints
-//! exist to measure the Soroban host cost of alternative signature schemes and
-//! are not part of the production path. `get_price` reads the latest entry.
+//! Production pull-mode entrypoints (both hardened: registered-publisher
+//! check, staleness bound, monotonic round_id):
+//!
+//! - `update_batch_ed25519_args` — writes temporary storage, read via
+//!   `get_price`. For consumers that verify-then-read inside one transaction.
+//! - `update_batch_ed25519_persistent` — writes persistent storage, read via
+//!   `get_price_pers`. For consumers that read between keeper heartbeats
+//!   (e.g. a perp market reading through a SEP-40 shim).
+//!
+//! The remaining `update_*` entrypoints exist only to measure the Soroban
+//! host cost of alternative signature schemes. They perform NO publisher or
+//! freshness checks and are compiled only with the `bench` feature — never
+//! deploy a bench build to a network where the oracle is consumed.
 
 use soroban_sdk::{
-    contract, contracterror, contractimpl, contracttype,
-    crypto::bls12_381::{Bls12381G1Affine, Bls12381G2Affine},
-    Address, Bytes, BytesN, Env, Vec,
+    contract, contracterror, contractimpl, contracttype, Address, Bytes, BytesN, Env, Vec,
 };
+
+#[cfg(feature = "bench")]
+use soroban_sdk::crypto::bls12_381::{Bls12381G1Affine, Bls12381G2Affine};
 
 /// Errors returned by the production pull-mode entrypoint and admin calls.
 #[contracterror]
@@ -61,6 +69,8 @@ pub struct OracleV0;
 impl OracleV0 {
     /// One-time setup: record the admin Address and the initial publisher
     /// Ed25519 key set. Errors if the contract is already initialized.
+    /// The admin must authorize the call, so a freshly deployed instance
+    /// cannot be claimed by whoever calls init first.
     pub fn init(
         env: Env,
         admin: Address,
@@ -69,6 +79,7 @@ impl OracleV0 {
         if env.storage().instance().has(&DataKey::Admin) {
             return Err(Error::AlreadyInitialized);
         }
+        admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Publishers, &publishers);
         Ok(())
@@ -83,28 +94,6 @@ impl OracleV0 {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Publishers, &publishers);
         Ok(())
-    }
-
-    // -------- Ed25519 (publisher pubkeys passed as args) --------
-    pub fn update_ed25519_args(
-        env: Env,
-        asset: BytesN<8>,
-        price: i128,
-        timestamp: u64,
-        round_id: u64,
-        pubkeys: Vec<BytesN<32>>,
-        sigs: Vec<BytesN<64>>,
-    ) {
-        let msg = build_msg(&env, &asset, price, timestamp, round_id);
-        let n = pubkeys.len();
-        for i in 0..n {
-            env.crypto().ed25519_verify(
-                &pubkeys.get_unchecked(i),
-                &msg,
-                &sigs.get_unchecked(i),
-            );
-        }
-        write_temp(&env, asset, PriceEntry { price, timestamp, round_id });
     }
 
     // -------- Ed25519 batch (single publisher, multiple assets, one tx) --------
@@ -169,6 +158,113 @@ impl OracleV0 {
             }
         }
         Ok(())
+    }
+
+    // -------- Ed25519 batch, persistent storage (production) --------
+    //
+    // Same hardened checks as `update_batch_ed25519_args`, but the round is
+    // written to persistent storage and read back via `get_price_pers`, so a
+    // consumer that reads between keeper heartbeats (rather than bundling the
+    // update into its own transaction) keeps working across temporary-entry
+    // expiry. Each asset is signed independently over the same 40-byte format.
+    pub fn update_batch_ed25519_persistent(
+        env: Env,
+        assets: Vec<BytesN<8>>,
+        prices: Vec<i128>,
+        timestamp: u64,
+        round_id: u64,
+        pubkey: BytesN<32>,
+        sigs: Vec<BytesN<64>>,
+    ) -> Result<(), Error> {
+        let n = assets.len();
+        if prices.len() != n || sigs.len() != n {
+            return Err(Error::BatchLengthMismatch);
+        }
+
+        // The signing key must be a registered publisher.
+        if !env.storage().instance().has(&DataKey::Publishers) {
+            return Err(Error::NotInitialized);
+        }
+        let publishers: Vec<BytesN<32>> =
+            env.storage().instance().get(&DataKey::Publishers).unwrap();
+        if !is_publisher(&publishers, &pubkey) {
+            return Err(Error::UnknownPublisher);
+        }
+
+        // Reject rounds signed more than STALENESS_SECS ago.
+        let now = env.ledger().timestamp();
+        if now.saturating_sub(timestamp) > STALENESS_SECS {
+            return Err(Error::StalePrice);
+        }
+
+        let crypto = env.crypto();
+        for i in 0..n {
+            let asset = assets.get_unchecked(i);
+            let price = prices.get_unchecked(i);
+            let msg = build_msg(&env, &asset, price, timestamp, round_id);
+            crypto.ed25519_verify(&pubkey, &msg, &sigs.get_unchecked(i));
+
+            // Monotonic advance with silent no-op on lagging or replayed
+            // rounds — same rationale as the temporary-storage batch path: a
+            // consumer's transaction must never fail on cross-consumer
+            // ordering. Staleness is already bounded above.
+            let prev: Option<PriceEntry> = env
+                .storage()
+                .persistent()
+                .get(&DataKey::PricePers(asset.clone()));
+            let is_newer = match prev {
+                Some(prev) => round_id > prev.round_id,
+                None => true,
+            };
+            if is_newer {
+                write_pers(&env, asset, PriceEntry { price, timestamp, round_id });
+            }
+        }
+        Ok(())
+    }
+
+    // -------- Reads --------
+    pub fn get_price(env: Env, asset: BytesN<8>) -> Option<PriceEntry> {
+        env.storage().temporary().get(&DataKey::PriceTemp(asset))
+    }
+
+    pub fn get_price_pers(env: Env, asset: BytesN<8>) -> Option<PriceEntry> {
+        env.storage().persistent().get(&DataKey::PricePers(asset))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Benchmark-only entrypoints (`bench` feature, off by default).
+//
+// These exist to measure the Soroban host cost of alternative signature
+// schemes and storage types. They perform NO publisher, staleness, or
+// monotonicity checks — a caller can write any price with any key. Production
+// builds exclude them; never deploy a bench build to a network where the
+// oracle is consumed.
+// ---------------------------------------------------------------------------
+#[cfg(feature = "bench")]
+#[contractimpl]
+impl OracleV0 {
+    // -------- Ed25519 (publisher pubkeys passed as args) --------
+    pub fn update_ed25519_args(
+        env: Env,
+        asset: BytesN<8>,
+        price: i128,
+        timestamp: u64,
+        round_id: u64,
+        pubkeys: Vec<BytesN<32>>,
+        sigs: Vec<BytesN<64>>,
+    ) {
+        let msg = build_msg(&env, &asset, price, timestamp, round_id);
+        let n = pubkeys.len();
+        for i in 0..n {
+            env.crypto().ed25519_verify(
+                &pubkeys.get_unchecked(i),
+                &msg,
+                &sigs.get_unchecked(i),
+            );
+        }
+        write_temp(&env, asset, PriceEntry { price, timestamp, round_id });
     }
 
     // -------- Ed25519 (publisher pubkeys from instance storage) --------
@@ -294,15 +390,6 @@ impl OracleV0 {
         }
         write_temp(&env, asset, PriceEntry { price, timestamp, round_id });
     }
-
-    // -------- Reads --------
-    pub fn get_price(env: Env, asset: BytesN<8>) -> Option<PriceEntry> {
-        env.storage().temporary().get(&DataKey::PriceTemp(asset))
-    }
-
-    pub fn get_price_pers(env: Env, asset: BytesN<8>) -> Option<PriceEntry> {
-        env.storage().persistent().get(&DataKey::PricePers(asset))
-    }
 }
 
 fn is_publisher(publishers: &Vec<BytesN<32>>, pubkey: &BytesN<32>) -> bool {
@@ -336,6 +423,14 @@ fn write_temp(env: &Env, asset: BytesN<8>, entry: PriceEntry) {
     env.storage()
         .temporary()
         .extend_ttl(&key, TEMP_THRESHOLD, TEMP_EXTEND);
+}
+
+fn write_pers(env: &Env, asset: BytesN<8>, entry: PriceEntry) {
+    let key = DataKey::PricePers(asset);
+    env.storage().persistent().set(&key, &entry);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, PERS_THRESHOLD, PERS_EXTEND);
 }
 
 #[cfg(test)]
