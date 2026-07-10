@@ -1,0 +1,39 @@
+name: contract-tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "oracle_v0/**"
+      - "bench/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/contract-tests.yml"
+  pull_request:
+    paths:
+      - "oracle_v0/**"
+      - "bench/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/contract-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32v1-none
+      - uses: Swatinem/rust-cache@v2
+
+      # Production surface: hardened batch entrypoints only.
+      - name: Test (default features)
+        run: cargo test -p noeracle_oracle_v0
+
+      # Bench surface still has to compile and pass so fee sweeps don't rot.
+      - name: Test (bench feature)
+        run: cargo test -p noeracle_oracle_v0 --features bench
+
+      - name: Build production wasm
+        run: cargo build -p noeracle_oracle_v0 --target wasm32v1-none --release
