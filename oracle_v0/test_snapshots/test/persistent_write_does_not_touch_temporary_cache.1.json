@@ -21,7 +21,7 @@
                 {
                   "vec": [
                     {
-                      "bytes": "6ce1b072bffc722e42060d13574ba47f8a0147950a0dc7e1880e3ee29b65103a"
+                      "bytes": "248e57926d616f38554ad067726d91b4f489418e5ff45864a43074d02c52ebbb"
                     }
                   ]
                 }
@@ -32,18 +32,72 @@
         }
       ]
     ],
+    [],
+    [],
     []
   ],
   "ledger": {
     "protocol_version": 26,
     "sequence_number": 0,
-    "timestamp": 1000120,
+    "timestamp": 1000000,
     "network_id": "0000000000000000000000000000000000000000000000000000000000000000",
     "base_reserve": 0,
     "min_persistent_entry_ttl": 4096,
     "min_temp_entry_ttl": 16,
     "max_entry_ttl": 6312000,
     "ledger_entries": [
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "PricePers"
+                  },
+                  {
+                    "bytes": "4254435553440000"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "map": [
+                  {
+                    "key": {
+                      "symbol": "price"
+                    },
+                    "val": {
+                      "i128": "100"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "round_id"
+                    },
+                    "val": {
+                      "u64": "1"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "timestamp"
+                    },
+                    "val": {
+                      "u64": "1000000"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 120960
+      },
       {
         "entry": {
           "last_modified_ledger_seq": 0,
@@ -82,7 +136,7 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "6ce1b072bffc722e42060d13574ba47f8a0147950a0dc7e1880e3ee29b65103a"
+                            "bytes": "248e57926d616f38554ad067726d91b4f489418e5ff45864a43074d02c52ebbb"
                           }
                         ]
                       }

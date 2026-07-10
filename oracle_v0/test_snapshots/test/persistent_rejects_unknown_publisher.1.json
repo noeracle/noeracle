@@ -21,7 +21,7 @@
                 {
                   "vec": [
                     {
-                      "bytes": "6ce1b072bffc722e42060d13574ba47f8a0147950a0dc7e1880e3ee29b65103a"
+                      "bytes": "2f4814c91ad9cb6f0cc98dc7d6604f25dff9d1c223197e6fa2383e6c75e1a89a"
                     }
                   ]
                 }
@@ -32,12 +32,13 @@
         }
       ]
     ],
+    [],
     []
   ],
   "ledger": {
     "protocol_version": 26,
     "sequence_number": 0,
-    "timestamp": 1000120,
+    "timestamp": 1000000,
     "network_id": "0000000000000000000000000000000000000000000000000000000000000000",
     "base_reserve": 0,
     "min_persistent_entry_ttl": 4096,
@@ -82,7 +83,7 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "6ce1b072bffc722e42060d13574ba47f8a0147950a0dc7e1880e3ee29b65103a"
+                            "bytes": "2f4814c91ad9cb6f0cc98dc7d6604f25dff9d1c223197e6fa2383e6c75e1a89a"
                           }
                         ]
                       }
