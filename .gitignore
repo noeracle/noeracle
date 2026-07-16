@@ -20,3 +20,7 @@ proposals/
 DOCUMENTATION_PLAN.md
 CLAUDE.md
 decisions/
+# local tooling + nested site repo (separate noeracle/site working copy)
+site/
+.agents/
+skills-lock.json
