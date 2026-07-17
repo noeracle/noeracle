@@ -230,6 +230,33 @@ fn set_publishers_rotates_the_key_set() {
 }
 
 #[test]
+fn quorum_defaults_to_one_and_is_admin_configurable() {
+    let env = Env::default();
+    let (client, _signer) = setup(&env); // one registered publisher
+    assert_eq!(client.get_quorum(), 1);
+    client.set_quorum(&1u32);
+    assert_eq!(client.get_quorum(), 1);
+}
+
+#[test]
+fn set_quorum_rejects_out_of_range() {
+    let env = Env::default();
+    let (client, _signer) = setup(&env); // one registered publisher
+    assert_eq!(client.try_set_quorum(&0u32), Err(Ok(Error::InvalidQuorum)));
+    // More signers than registered publishers can never be gathered.
+    assert_eq!(client.try_set_quorum(&2u32), Err(Ok(Error::InvalidQuorum)));
+}
+
+#[test]
+fn set_quorum_requires_admin_auth() {
+    let env = Env::default();
+    let (client, _signer) = setup(&env);
+    // Drop the blanket auth mock installed by setup().
+    env.set_auths(&[]);
+    assert!(client.try_set_quorum(&1u32).is_err());
+}
+
+#[test]
 fn upgrade_requires_admin_auth() {
     let env = Env::default();
     let (client, _signer) = setup(&env);

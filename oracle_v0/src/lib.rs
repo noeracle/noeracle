@@ -33,6 +33,7 @@ pub enum Error {
     BatchLengthMismatch = 3,
     UnknownPublisher = 4,
     StalePrice = 5,
+    InvalidQuorum = 6,
 }
 
 #[contracttype]
@@ -42,6 +43,7 @@ pub enum DataKey {
     Publishers,
     PriceTemp(BytesN<8>),
     PricePers(BytesN<8>),
+    Quorum,
 }
 
 #[contracttype]
@@ -94,6 +96,33 @@ impl OracleV0 {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Publishers, &publishers);
         Ok(())
+    }
+
+    /// Set the minimum number of distinct registered publishers whose signed
+    /// rounds `update_quorum_ed25519_persistent` must carry. Admin-
+    /// authenticated. Must satisfy 1 <= quorum <= publishers.len() at set
+    /// time; an unset quorum behaves as 1, so existing single-publisher
+    /// deployments are unchanged until the admin raises the bar. (A later
+    /// `set_publishers` may shrink the key set below this threshold — the
+    /// quorum path then cannot meet quorum until the admin re-syncs.)
+    pub fn set_quorum(env: Env, quorum: u32) -> Result<(), Error> {
+        if !env.storage().instance().has(&DataKey::Admin) {
+            return Err(Error::NotInitialized);
+        }
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        admin.require_auth();
+        let publishers: Vec<BytesN<32>> =
+            env.storage().instance().get(&DataKey::Publishers).unwrap();
+        if quorum < 1 || quorum > publishers.len() {
+            return Err(Error::InvalidQuorum);
+        }
+        env.storage().instance().set(&DataKey::Quorum, &quorum);
+        Ok(())
+    }
+
+    /// Current quorum threshold (1 when never configured).
+    pub fn get_quorum(env: Env) -> u32 {
+        quorum(&env)
     }
 
     /// Swap the running contract's WASM for an already-uploaded blob.
@@ -405,6 +434,12 @@ impl OracleV0 {
         }
         write_temp(&env, asset, PriceEntry { price, timestamp, round_id });
     }
+}
+
+// Quorum threshold with a default of 1: deployments that never call
+// set_quorum keep today's single-publisher behavior.
+fn quorum(env: &Env) -> u32 {
+    env.storage().instance().get(&DataKey::Quorum).unwrap_or(1)
 }
 
 fn is_publisher(publishers: &Vec<BytesN<32>>, pubkey: &BytesN<32>) -> bool {
