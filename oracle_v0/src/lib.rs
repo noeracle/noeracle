@@ -11,6 +11,10 @@
 //!   `get_price_pers`. For consumers that read between keeper heartbeats
 //!   (e.g. a perp market reading through a SEP-40 shim).
 //!
+//! Every persistent write also appends to a per-asset history ring (the
+//! `RING_CAP` most recent monotonic rounds), served by the `prices` and
+//! `twap` views.
+//!
 //! The remaining `update_*` entrypoints exist only to measure the Soroban
 //! host cost of alternative signature schemes. They perform NO publisher or
 //! freshness checks and are compiled only with the `bench` feature — never
@@ -44,6 +48,7 @@ pub enum DataKey {
     PriceTemp(BytesN<8>),
     PricePers(BytesN<8>),
     Quorum,
+    PriceRing(BytesN<8>),
 }
 
 #[contracttype]
@@ -63,6 +68,10 @@ const TEMP_THRESHOLD: u32 = 360;
 const TEMP_EXTEND: u32 = 720;
 const PERS_THRESHOLD: u32 = 60_480;
 const PERS_EXTEND: u32 = 120_960;
+
+// Per-asset history ring capacity: the most recent RING_CAP monotonic rounds
+// are kept in persistent storage for the prices()/twap() views.
+const RING_CAP: u32 = 32;
 
 #[contract]
 pub struct OracleV0;
@@ -275,6 +284,47 @@ impl OracleV0 {
     pub fn get_price_pers(env: Env, asset: BytesN<8>) -> Option<PriceEntry> {
         env.storage().persistent().get(&DataKey::PricePers(asset))
     }
+
+    /// The last `records` rounds from the asset's history ring, latest-first.
+    /// Returns up to min(records, stored) entries; `None` when the asset has
+    /// no history at all (a `records` of 0 with history is an empty page).
+    pub fn prices(env: Env, asset: BytesN<8>, records: u32) -> Option<Vec<PriceEntry>> {
+        let ring: Vec<PriceEntry> =
+            env.storage().persistent().get(&DataKey::PriceRing(asset))?;
+        let len = ring.len();
+        let take = if records < len { records } else { len };
+        let mut out = Vec::new(&env);
+        for i in 0..take {
+            out.push_back(ring.get_unchecked(len - 1 - i));
+        }
+        Some(out)
+    }
+
+    /// Arithmetic mean of the last min(records, stored) ring prices. This is
+    /// a simple mean over stored ROUNDS, not a time-weighted average —
+    /// adequate for a consumer's median-of-last-k / smoothing eligibility
+    /// checks, not for interval-exact TWAP accounting. `None` when the asset
+    /// has no history or `records` is 0.
+    pub fn twap(env: Env, asset: BytesN<8>, records: u32) -> Option<i128> {
+        if records == 0 {
+            return None;
+        }
+        let ring: Vec<PriceEntry> =
+            env.storage().persistent().get(&DataKey::PriceRing(asset))?;
+        let len = ring.len();
+        if len == 0 {
+            return None;
+        }
+        let take = if records < len { records } else { len };
+        let mut sum: i128 = 0;
+        for i in (len - take)..len {
+            // Prices are 1e7-scaled USD values, so a RING_CAP-entry sum sits
+            // far below i128::MAX; checked add still traps on absurd inputs
+            // rather than wrapping.
+            sum = sum.checked_add(ring.get_unchecked(i).price).unwrap();
+        }
+        Some(sum / take as i128)
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -476,8 +526,32 @@ fn write_temp(env: &Env, asset: BytesN<8>, entry: PriceEntry) {
 }
 
 fn write_pers(env: &Env, asset: BytesN<8>, entry: PriceEntry) {
-    let key = DataKey::PricePers(asset);
+    let key = DataKey::PricePers(asset.clone());
     env.storage().persistent().set(&key, &entry);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, PERS_THRESHOLD, PERS_EXTEND);
+    push_ring(env, asset, entry);
+}
+
+// Append a round to the asset's history ring, evicting the oldest entry once
+// the ring exceeds RING_CAP. Lives inside write_pers so BOTH persistent
+// writers — the single-publisher batch path and the quorum median path —
+// feed history, and only rounds that passed the monotonic round_id check
+// ever land here (write_pers is called strictly behind that check).
+fn push_ring(env: &Env, asset: BytesN<8>, entry: PriceEntry) {
+    let key = DataKey::PriceRing(asset);
+    let mut ring: Vec<PriceEntry> = env
+        .storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or_else(|| Vec::new(env));
+    ring.push_back(entry);
+    if ring.len() > RING_CAP {
+        // At RING_CAP = 32 the O(n) shift from remove(0) is negligible.
+        ring.remove(0);
+    }
+    env.storage().persistent().set(&key, &ring);
     env.storage()
         .persistent()
         .extend_ttl(&key, PERS_THRESHOLD, PERS_EXTEND);

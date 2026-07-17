@@ -410,6 +410,121 @@ fn persistent_write_does_not_touch_temporary_cache() {
         .is_some());
 }
 
+// ---------------------------------------------------------------------------
+// History ring — every persistent write appends; prices()/twap() serve it.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn history_views_are_none_without_persistent_writes() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+    assert!(client.prices(&asset, &5u32).is_none());
+    assert!(client.twap(&asset, &5u32).is_none());
+
+    // The temporary-storage path must not feed the ring either.
+    let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, 100)], BASE_TS, 1);
+    client.update_batch_ed25519_args(&a, &p, &BASE_TS, &1u64, &pk, &s);
+    assert!(client.prices(&asset, &5u32).is_none());
+    assert!(client.twap(&asset, &5u32).is_none());
+}
+
+#[test]
+fn persistent_write_pushes_ring_entry() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+    let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, 100)], BASE_TS, 1);
+    client.update_batch_ed25519_persistent(&a, &p, &BASE_TS, &1u64, &pk, &s);
+
+    let hist = client.prices(&asset, &5u32).unwrap();
+    assert_eq!(hist.len(), 1);
+    let entry = hist.get_unchecked(0);
+    assert_eq!(entry.price, 100);
+    assert_eq!(entry.timestamp, BASE_TS);
+    assert_eq!(entry.round_id, 1);
+}
+
+#[test]
+fn lagging_round_does_not_push_ring_entry() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+    let (a1, p1, pk1, s1) = sign_round(&env, &signer, &[(ASSET_BTC, 100)], BASE_TS, 5);
+    client.update_batch_ed25519_persistent(&a1, &p1, &BASE_TS, &5u64, &pk1, &s1);
+
+    // Lagging (3) and equal (5) rounds are silent no-ops for the cache — and
+    // must leave no trace in the history ring.
+    let (a2, p2, pk2, s2) = sign_round(&env, &signer, &[(ASSET_BTC, 200)], BASE_TS, 3);
+    client.update_batch_ed25519_persistent(&a2, &p2, &BASE_TS, &3u64, &pk2, &s2);
+    let (a3, p3, pk3, s3) = sign_round(&env, &signer, &[(ASSET_BTC, 300)], BASE_TS, 5);
+    client.update_batch_ed25519_persistent(&a3, &p3, &BASE_TS, &5u64, &pk3, &s3);
+
+    let hist = client.prices(&asset, &10u32).unwrap();
+    assert_eq!(hist.len(), 1);
+    assert_eq!(hist.get_unchecked(0).round_id, 5);
+    assert_eq!(hist.get_unchecked(0).price, 100);
+}
+
+#[test]
+fn ring_caps_at_32_latest_first() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+    for round in 1..=40u64 {
+        let price = round as i128 * 10;
+        let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, price)], BASE_TS, round);
+        client.update_batch_ed25519_persistent(&a, &p, &BASE_TS, &round, &pk, &s);
+    }
+
+    // 40 monotonic rounds, capacity 32: rounds 1..=8 were evicted.
+    let hist = client.prices(&asset, &50u32).unwrap();
+    assert_eq!(hist.len(), 32);
+    assert_eq!(hist.get_unchecked(0).round_id, 40);
+    assert_eq!(hist.get_unchecked(0).price, 400);
+    assert_eq!(hist.get_unchecked(31).round_id, 9);
+    assert_eq!(hist.get_unchecked(31).price, 90);
+}
+
+#[test]
+fn prices_truncates_to_requested_records() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+    for round in 1..=3u64 {
+        let price = round as i128 * 100;
+        let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, price)], BASE_TS, round);
+        client.update_batch_ed25519_persistent(&a, &p, &BASE_TS, &round, &pk, &s);
+    }
+
+    let hist = client.prices(&asset, &2u32).unwrap();
+    assert_eq!(hist.len(), 2);
+    assert_eq!(hist.get_unchecked(0).round_id, 3);
+    assert_eq!(hist.get_unchecked(1).round_id, 2);
+    // records == 0 with existing history is an empty page, not None — None is
+    // reserved for "no history at all".
+    assert_eq!(client.prices(&asset, &0u32).unwrap().len(), 0);
+}
+
+#[test]
+fn twap_is_mean_over_last_records() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+    for (round, price) in [(1u64, 100i128), (2, 200), (3, 300)] {
+        let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, price)], BASE_TS, round);
+        client.update_batch_ed25519_persistent(&a, &p, &BASE_TS, &round, &pk, &s);
+    }
+
+    assert_eq!(client.twap(&asset, &3u32), Some(200)); // (100+200+300)/3
+    assert_eq!(client.twap(&asset, &2u32), Some(250)); // (200+300)/2
+    assert_eq!(client.twap(&asset, &1u32), Some(300));
+    // records beyond stored history clamps to what is stored.
+    assert_eq!(client.twap(&asset, &10u32), Some(200));
+    // records == 0 is meaningless — None, never a fabricated value.
+    assert_eq!(client.twap(&asset, &0u32), None);
+}
+
 // Decode an N-byte value from a hex string (test helper).
 fn hex_bytes<const N: usize>(s: &str) -> [u8; N] {
     let b = s.as_bytes();
