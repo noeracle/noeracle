@@ -21,9 +21,31 @@
                 {
                   "vec": [
                     {
-                      "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                      "bytes": "aa51be59364ca94d5c5d90f1d06e02bc7508834fdc7fcf675be6d9f2f73d5726"
+                    },
+                    {
+                      "bytes": "dcb2c2e440c0a69eb1544115262f343078ffe1fc407813b48dc8bc2b6efdc1e0"
                     }
                   ]
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "set_quorum",
+              "args": [
+                {
+                  "u32": 2
                 }
               ]
             }
@@ -70,7 +92,7 @@
                       "symbol": "price"
                     },
                     "val": {
-                      "i128": "6543210000000"
+                      "i128": "200"
                     }
                   },
                   {
@@ -124,7 +146,7 @@
                           "symbol": "price"
                         },
                         "val": {
-                          "i128": "6543210000000"
+                          "i128": "200"
                         }
                       },
                       {
@@ -191,9 +213,24 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                            "bytes": "aa51be59364ca94d5c5d90f1d06e02bc7508834fdc7fcf675be6d9f2f73d5726"
+                          },
+                          {
+                            "bytes": "dcb2c2e440c0a69eb1544115262f343078ffe1fc407813b48dc8bc2b6efdc1e0"
                           }
                         ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "vec": [
+                          {
+                            "symbol": "Quorum"
+                          }
+                        ]
+                      },
+                      "val": {
+                        "u32": 2
                       }
                     }
                   ]
@@ -215,6 +252,26 @@
               "key": {
                 "ledger_key_nonce": {
                   "nonce": "801925984706572462"
+                }
+              },
+              "durability": "temporary",
+              "val": "void"
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 6311999
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "ledger_key_nonce": {
+                  "nonce": "5541220902715666415"
                 }
               },
               "durability": "temporary",

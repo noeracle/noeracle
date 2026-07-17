@@ -21,7 +21,7 @@
                 {
                   "vec": [
                     {
-                      "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                      "bytes": "c6c01d78a8018e96bb9bbbf8c8b9957dcc7e46d1f05aedffe1383c1fac6e0aee"
                     }
                   ]
                 }
@@ -32,6 +32,12 @@
         }
       ]
     ],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
     [],
     []
   ],
@@ -70,7 +76,7 @@
                       "symbol": "price"
                     },
                     "val": {
-                      "i128": "6543210000000"
+                      "i128": "300"
                     }
                   },
                   {
@@ -78,7 +84,7 @@
                       "symbol": "round_id"
                     },
                     "val": {
-                      "u64": "1"
+                      "u64": "3"
                     }
                   },
                   {
@@ -124,7 +130,7 @@
                           "symbol": "price"
                         },
                         "val": {
-                          "i128": "6543210000000"
+                          "i128": "100"
                         }
                       },
                       {
@@ -133,6 +139,62 @@
                         },
                         "val": {
                           "u64": "1"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "200"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "2"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "300"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "3"
                         }
                       },
                       {
@@ -191,7 +253,7 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                            "bytes": "c6c01d78a8018e96bb9bbbf8c8b9957dcc7e46d1f05aedffe1383c1fac6e0aee"
                           }
                         ]
                       }

@@ -21,7 +21,7 @@
                 {
                   "vec": [
                     {
-                      "bytes": "39e73983d03accd98edac5db75d917ff7464e31abce4ff6624267764717f48c5"
+                      "bytes": "9648022151859d7e4fec75f610068c229d94267e9171c9536e77e3d5cae8470a"
                     }
                   ]
                 }
@@ -157,6 +157,118 @@
             "contract_data": {
               "ext": "v0",
               "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "PriceRing"
+                  },
+                  {
+                    "bytes": "4254435553440000"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "vec": [
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "650000000000"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "1"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 120960
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "PriceRing"
+                  },
+                  {
+                    "bytes": "4554485553440000"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "vec": [
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "32000000000"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "1"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 120960
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
               "key": "ledger_key_contract_instance",
               "durability": "persistent",
               "val": {
@@ -188,7 +300,7 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "39e73983d03accd98edac5db75d917ff7464e31abce4ff6624267764717f48c5"
+                            "bytes": "9648022151859d7e4fec75f610068c229d94267e9171c9536e77e3d5cae8470a"
                           }
                         ]
                       }

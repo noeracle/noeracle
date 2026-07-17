@@ -21,7 +21,13 @@
                 {
                   "vec": [
                     {
-                      "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                      "bytes": "9c6a036121adc54b4eb0fb3592f24f6209a2979106beb1056cfbf492a6fcfe6a"
+                    },
+                    {
+                      "bytes": "6a23679a0a541c80ee730d4221192f0d547295195964ce0df3c47f014a5f939b"
+                    },
+                    {
+                      "bytes": "ec0e25f4861d4e182f80818e4a722621c01087ec092c8d05b2a2d63b629e356b"
                     }
                   ]
                 }
@@ -32,6 +38,26 @@
         }
       ]
     ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "set_quorum",
+              "args": [
+                {
+                  "u32": 3
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
     [],
     []
   ],
@@ -70,7 +96,59 @@
                       "symbol": "price"
                     },
                     "val": {
-                      "i128": "6543210000000"
+                      "i128": "200"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "round_id"
+                    },
+                    "val": {
+                      "u64": "1"
+                    }
+                  },
+                  {
+                    "key": {
+                      "symbol": "timestamp"
+                    },
+                    "val": {
+                      "u64": "1000000"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 120960
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "PricePers"
+                  },
+                  {
+                    "bytes": "4554485553440000"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "map": [
+                  {
+                    "key": {
+                      "symbol": "price"
+                    },
+                    "val": {
+                      "i128": "20"
                     }
                   },
                   {
@@ -124,7 +202,63 @@
                           "symbol": "price"
                         },
                         "val": {
-                          "i128": "6543210000000"
+                          "i128": "200"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "1"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 120960
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "PriceRing"
+                  },
+                  {
+                    "bytes": "4554485553440000"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "vec": [
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "20"
                         }
                       },
                       {
@@ -191,9 +325,27 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                            "bytes": "9c6a036121adc54b4eb0fb3592f24f6209a2979106beb1056cfbf492a6fcfe6a"
+                          },
+                          {
+                            "bytes": "6a23679a0a541c80ee730d4221192f0d547295195964ce0df3c47f014a5f939b"
+                          },
+                          {
+                            "bytes": "ec0e25f4861d4e182f80818e4a722621c01087ec092c8d05b2a2d63b629e356b"
                           }
                         ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "vec": [
+                          {
+                            "symbol": "Quorum"
+                          }
+                        ]
+                      },
+                      "val": {
+                        "u32": 3
                       }
                     }
                   ]
@@ -215,6 +367,26 @@
               "key": {
                 "ledger_key_nonce": {
                   "nonce": "801925984706572462"
+                }
+              },
+              "durability": "temporary",
+              "val": "void"
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 6311999
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "ledger_key_nonce": {
+                  "nonce": "5541220902715666415"
                 }
               },
               "durability": "temporary",

@@ -21,7 +21,7 @@
                 {
                   "vec": [
                     {
-                      "bytes": "248e57926d616f38554ad067726d91b4f489418e5ff45864a43074d02c52ebbb"
+                      "bytes": "f3e59c6adb9f146a5490cfa0a30ef46069798242987d138b18063350790c5208"
                     }
                   ]
                 }
@@ -105,6 +105,62 @@
             "contract_data": {
               "ext": "v0",
               "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "PriceRing"
+                  },
+                  {
+                    "bytes": "4254435553440000"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "vec": [
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "100"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "1"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 120960
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
               "key": "ledger_key_contract_instance",
               "durability": "persistent",
               "val": {
@@ -136,7 +192,7 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "248e57926d616f38554ad067726d91b4f489418e5ff45864a43074d02c52ebbb"
+                            "bytes": "f3e59c6adb9f146a5490cfa0a30ef46069798242987d138b18063350790c5208"
                           }
                         ]
                       }

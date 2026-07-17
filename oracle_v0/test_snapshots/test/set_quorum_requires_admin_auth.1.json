@@ -21,7 +21,7 @@
                 {
                   "vec": [
                     {
-                      "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                      "bytes": "8c84984c74451d25ae6e21af6d740e0b9680fb762f549e6aaa727729afa0ba5d"
                     }
                   ]
                 }
@@ -32,7 +32,6 @@
         }
       ]
     ],
-    [],
     []
   ],
   "ledger": {
@@ -45,114 +44,6 @@
     "min_temp_entry_ttl": 16,
     "max_entry_ttl": 6312000,
     "ledger_entries": [
-      {
-        "entry": {
-          "last_modified_ledger_seq": 0,
-          "data": {
-            "contract_data": {
-              "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "key": {
-                "vec": [
-                  {
-                    "symbol": "PricePers"
-                  },
-                  {
-                    "bytes": "4254435553440000"
-                  }
-                ]
-              },
-              "durability": "persistent",
-              "val": {
-                "map": [
-                  {
-                    "key": {
-                      "symbol": "price"
-                    },
-                    "val": {
-                      "i128": "6543210000000"
-                    }
-                  },
-                  {
-                    "key": {
-                      "symbol": "round_id"
-                    },
-                    "val": {
-                      "u64": "1"
-                    }
-                  },
-                  {
-                    "key": {
-                      "symbol": "timestamp"
-                    },
-                    "val": {
-                      "u64": "1000000"
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          "ext": "v0"
-        },
-        "live_until": 120960
-      },
-      {
-        "entry": {
-          "last_modified_ledger_seq": 0,
-          "data": {
-            "contract_data": {
-              "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "key": {
-                "vec": [
-                  {
-                    "symbol": "PriceRing"
-                  },
-                  {
-                    "bytes": "4254435553440000"
-                  }
-                ]
-              },
-              "durability": "persistent",
-              "val": {
-                "vec": [
-                  {
-                    "map": [
-                      {
-                        "key": {
-                          "symbol": "price"
-                        },
-                        "val": {
-                          "i128": "6543210000000"
-                        }
-                      },
-                      {
-                        "key": {
-                          "symbol": "round_id"
-                        },
-                        "val": {
-                          "u64": "1"
-                        }
-                      },
-                      {
-                        "key": {
-                          "symbol": "timestamp"
-                        },
-                        "val": {
-                          "u64": "1000000"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "ext": "v0"
-        },
-        "live_until": 120960
-      },
       {
         "entry": {
           "last_modified_ledger_seq": 0,
@@ -191,7 +82,7 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                            "bytes": "8c84984c74451d25ae6e21af6d740e0b9680fb762f549e6aaa727729afa0ba5d"
                           }
                         ]
                       }

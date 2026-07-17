@@ -21,7 +21,7 @@
                 {
                   "vec": [
                     {
-                      "bytes": "4fe61a22ef2ff7a09be84ec4a85cb9e830691fe281feb60fbf9e31ab2da63a9e"
+                      "bytes": "14485cb020d4e27486a88709c299d44823ecd5bf8805d9e91d1fc23edac0cd87"
                     }
                   ]
                 }
@@ -108,6 +108,90 @@
             "contract_data": {
               "ext": "v0",
               "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "key": {
+                "vec": [
+                  {
+                    "symbol": "PriceRing"
+                  },
+                  {
+                    "bytes": "4254435553440000"
+                  }
+                ]
+              },
+              "durability": "persistent",
+              "val": {
+                "vec": [
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "100"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "5"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "400"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "6"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 120960
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
               "key": "ledger_key_contract_instance",
               "durability": "persistent",
               "val": {
@@ -139,7 +223,7 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "4fe61a22ef2ff7a09be84ec4a85cb9e830691fe281feb60fbf9e31ab2da63a9e"
+                            "bytes": "14485cb020d4e27486a88709c299d44823ecd5bf8805d9e91d1fc23edac0cd87"
                           }
                         ]
                       }

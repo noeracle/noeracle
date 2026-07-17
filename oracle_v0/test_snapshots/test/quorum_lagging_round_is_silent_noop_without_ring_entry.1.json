@@ -21,7 +21,10 @@
                 {
                   "vec": [
                     {
-                      "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                      "bytes": "9f04046138373fd990e149680f749be84a91d77d64be32aa1ce571f4a92ae1b4"
+                    },
+                    {
+                      "bytes": "46f44eed0bb561d527fb970821d03365a3331d8515986480f877e72e913ccfc9"
                     }
                   ]
                 }
@@ -32,6 +35,31 @@
         }
       ]
     ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "set_quorum",
+              "args": [
+                {
+                  "u32": 2
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [],
+    [],
+    [],
+    [],
+    [],
     [],
     []
   ],
@@ -70,7 +98,7 @@
                       "symbol": "price"
                     },
                     "val": {
-                      "i128": "6543210000000"
+                      "i128": "350"
                     }
                   },
                   {
@@ -78,7 +106,7 @@
                       "symbol": "round_id"
                     },
                     "val": {
-                      "u64": "1"
+                      "u64": "6"
                     }
                   },
                   {
@@ -124,7 +152,7 @@
                           "symbol": "price"
                         },
                         "val": {
-                          "i128": "6543210000000"
+                          "i128": "150"
                         }
                       },
                       {
@@ -132,7 +160,35 @@
                           "symbol": "round_id"
                         },
                         "val": {
-                          "u64": "1"
+                          "u64": "5"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "timestamp"
+                        },
+                        "val": {
+                          "u64": "1000000"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "map": [
+                      {
+                        "key": {
+                          "symbol": "price"
+                        },
+                        "val": {
+                          "i128": "350"
+                        }
+                      },
+                      {
+                        "key": {
+                          "symbol": "round_id"
+                        },
+                        "val": {
+                          "u64": "6"
                         }
                       },
                       {
@@ -191,9 +247,24 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                            "bytes": "9f04046138373fd990e149680f749be84a91d77d64be32aa1ce571f4a92ae1b4"
+                          },
+                          {
+                            "bytes": "46f44eed0bb561d527fb970821d03365a3331d8515986480f877e72e913ccfc9"
                           }
                         ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "vec": [
+                          {
+                            "symbol": "Quorum"
+                          }
+                        ]
+                      },
+                      "val": {
+                        "u32": 2
                       }
                     }
                   ]
@@ -215,6 +286,26 @@
               "key": {
                 "ledger_key_nonce": {
                   "nonce": "801925984706572462"
+                }
+              },
+              "durability": "temporary",
+              "val": "void"
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 6311999
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "ledger_key_nonce": {
+                  "nonce": "5541220902715666415"
                 }
               },
               "durability": "temporary",

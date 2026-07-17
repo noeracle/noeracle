@@ -21,7 +21,13 @@
                 {
                   "vec": [
                     {
-                      "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                      "bytes": "113054dabf637c7f61c4f86597e5b25da02eccdb09e4604853566eb15da8892e"
+                    },
+                    {
+                      "bytes": "00bc94690503f21edc4c09a201c72b4d17592020c2f82f39861ab93a8f7ea942"
+                    },
+                    {
+                      "bytes": "f6dc7c3f338ad9644c9a4129f4db94c2612c343b45ce3afc4c6fd73f510a1c94"
                     }
                   ]
                 }
@@ -32,6 +38,27 @@
         }
       ]
     ],
+    [
+      [
+        "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+        {
+          "function": {
+            "contract_fn": {
+              "contract_address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+              "function_name": "set_quorum",
+              "args": [
+                {
+                  "u32": 2
+                }
+              ]
+            }
+          },
+          "sub_invocations": []
+        }
+      ]
+    ],
+    [],
+    [],
     [],
     []
   ],
@@ -70,7 +97,7 @@
                       "symbol": "price"
                     },
                     "val": {
-                      "i128": "6543210000000"
+                      "i128": "150"
                     }
                   },
                   {
@@ -124,7 +151,7 @@
                           "symbol": "price"
                         },
                         "val": {
-                          "i128": "6543210000000"
+                          "i128": "150"
                         }
                       },
                       {
@@ -191,9 +218,27 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                            "bytes": "113054dabf637c7f61c4f86597e5b25da02eccdb09e4604853566eb15da8892e"
+                          },
+                          {
+                            "bytes": "00bc94690503f21edc4c09a201c72b4d17592020c2f82f39861ab93a8f7ea942"
+                          },
+                          {
+                            "bytes": "f6dc7c3f338ad9644c9a4129f4db94c2612c343b45ce3afc4c6fd73f510a1c94"
                           }
                         ]
+                      }
+                    },
+                    {
+                      "key": {
+                        "vec": [
+                          {
+                            "symbol": "Quorum"
+                          }
+                        ]
+                      },
+                      "val": {
+                        "u32": 2
                       }
                     }
                   ]
@@ -215,6 +260,26 @@
               "key": {
                 "ledger_key_nonce": {
                   "nonce": "801925984706572462"
+                }
+              },
+              "durability": "temporary",
+              "val": "void"
+            }
+          },
+          "ext": "v0"
+        },
+        "live_until": 6311999
+      },
+      {
+        "entry": {
+          "last_modified_ledger_seq": 0,
+          "data": {
+            "contract_data": {
+              "ext": "v0",
+              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4",
+              "key": {
+                "ledger_key_nonce": {
+                  "nonce": "5541220902715666415"
                 }
               },
               "durability": "temporary",

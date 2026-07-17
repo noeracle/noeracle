@@ -21,7 +21,7 @@
                 {
                   "vec": [
                     {
-                      "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                      "bytes": "e61023e996a90f7090b1fdb6dca33a285a651ffdcbdc0bd8de08094ae4bd3dbf"
                     }
                   ]
                 }
@@ -32,6 +32,9 @@
         }
       ]
     ],
+    [],
+    [],
+    [],
     [],
     []
   ],
@@ -55,14 +58,14 @@
               "key": {
                 "vec": [
                   {
-                    "symbol": "PricePers"
+                    "symbol": "PriceTemp"
                   },
                   {
                     "bytes": "4254435553440000"
                   }
                 ]
               },
-              "durability": "persistent",
+              "durability": "temporary",
               "val": {
                 "map": [
                   {
@@ -70,7 +73,7 @@
                       "symbol": "price"
                     },
                     "val": {
-                      "i128": "6543210000000"
+                      "i128": "100"
                     }
                   },
                   {
@@ -95,63 +98,7 @@
           },
           "ext": "v0"
         },
-        "live_until": 120960
-      },
-      {
-        "entry": {
-          "last_modified_ledger_seq": 0,
-          "data": {
-            "contract_data": {
-              "ext": "v0",
-              "contract": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
-              "key": {
-                "vec": [
-                  {
-                    "symbol": "PriceRing"
-                  },
-                  {
-                    "bytes": "4254435553440000"
-                  }
-                ]
-              },
-              "durability": "persistent",
-              "val": {
-                "vec": [
-                  {
-                    "map": [
-                      {
-                        "key": {
-                          "symbol": "price"
-                        },
-                        "val": {
-                          "i128": "6543210000000"
-                        }
-                      },
-                      {
-                        "key": {
-                          "symbol": "round_id"
-                        },
-                        "val": {
-                          "u64": "1"
-                        }
-                      },
-                      {
-                        "key": {
-                          "symbol": "timestamp"
-                        },
-                        "val": {
-                          "u64": "1000000"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          },
-          "ext": "v0"
-        },
-        "live_until": 120960
+        "live_until": 720
       },
       {
         "entry": {
@@ -191,7 +138,7 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                            "bytes": "e61023e996a90f7090b1fdb6dca33a285a651ffdcbdc0bd8de08094ae4bd3dbf"
                           }
                         ]
                       }

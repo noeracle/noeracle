@@ -21,7 +21,10 @@
                 {
                   "vec": [
                     {
-                      "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                      "bytes": "b1f6ef3d26dc371c66136df2e2c922fb9b78fb81285bf6c56661c3c389b6856d"
+                    },
+                    {
+                      "bytes": "e4a32350db47fdeaa849b19acea70006207f986e17c19d6a412aefc7c43faa9d"
                     }
                   ]
                 }
@@ -70,7 +73,7 @@
                       "symbol": "price"
                     },
                     "val": {
-                      "i128": "6543210000000"
+                      "i128": "100"
                     }
                   },
                   {
@@ -124,7 +127,7 @@
                           "symbol": "price"
                         },
                         "val": {
-                          "i128": "6543210000000"
+                          "i128": "100"
                         }
                       },
                       {
@@ -191,7 +194,10 @@
                       "val": {
                         "vec": [
                           {
-                            "bytes": "d28acf4c40f64158f51749961a214a3e724e0b3a74233e9d7a3eae5713e017bc"
+                            "bytes": "b1f6ef3d26dc371c66136df2e2c922fb9b78fb81285bf6c56661c3c389b6856d"
+                          },
+                          {
+                            "bytes": "e4a32350db47fdeaa849b19acea70006207f986e17c19d6a412aefc7c43faa9d"
                           }
                         ]
                       }

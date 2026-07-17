@@ -1,8 +1,11 @@
 //! Tests for the hardened production paths — `update_batch_ed25519_args`
-//! (temporary storage) and `update_batch_ed25519_persistent` (persistent
-//! storage) — and the admin-gated publisher set: happy path, unknown
-//! publisher, stale price, stale round, batch-length mismatch, double init,
-//! init auth, storage isolation, and publisher rotation.
+//! (temporary storage), `update_batch_ed25519_persistent` (persistent
+//! storage), and `update_quorum_ed25519_persistent` (M-of-N median) — plus
+//! the admin surface (publisher set, quorum config, upgrade) and the history
+//! ring views (`prices`/`twap`): happy paths, unknown/duplicate publisher,
+//! quorum not met, per-asset median (odd/even), one-bad-signature revert,
+//! stale price, stale round, batch-length mismatch, double init, init auth,
+//! storage isolation, ring capacity/ordering, and publisher rotation.
 
 extern crate std;
 
