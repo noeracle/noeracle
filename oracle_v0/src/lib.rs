@@ -96,6 +96,21 @@ impl OracleV0 {
         Ok(())
     }
 
+    /// Swap the running contract's WASM for an already-uploaded blob.
+    /// Admin-authenticated (same gate as `set_publishers`). Shipping this is
+    /// deliberately the LAST forced redeploy: every future contract change
+    /// can land through `upgrade` instead of a fresh deploy + init ceremony +
+    /// consumer repoint (shim / router / keeper env).
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), Error> {
+        if !env.storage().instance().has(&DataKey::Admin) {
+            return Err(Error::NotInitialized);
+        }
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        admin.require_auth();
+        env.deployer().update_current_contract_wasm(new_wasm_hash);
+        Ok(())
+    }
+
     // -------- Ed25519 batch (single publisher, multiple assets, one tx) --------
     //
     // One transaction lands an entire price round. Each asset is signed

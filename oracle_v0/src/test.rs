@@ -229,6 +229,17 @@ fn set_publishers_rotates_the_key_set() {
     client.update_batch_ed25519_args(&a2, &p2, &BASE_TS, &1u64, &pk2, &s2);
 }
 
+#[test]
+fn upgrade_requires_admin_auth() {
+    let env = Env::default();
+    let (client, _signer) = setup(&env);
+    // Drop the blanket auth mock installed by setup(): an upgrade whose admin
+    // has not authorized the call must fail before any wasm swap is attempted.
+    env.set_auths(&[]);
+    let new_wasm_hash = BytesN::from_array(&env, &[7u8; 32]);
+    assert!(client.try_upgrade(&new_wasm_hash).is_err());
+}
+
 // ---------------------------------------------------------------------------
 // update_batch_ed25519_persistent — same hardened checks, persistent storage.
 // ---------------------------------------------------------------------------
