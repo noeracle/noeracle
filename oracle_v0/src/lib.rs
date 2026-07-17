@@ -10,6 +10,9 @@
 //! - `update_batch_ed25519_persistent` — writes persistent storage, read via
 //!   `get_price_pers`. For consumers that read between keeper heartbeats
 //!   (e.g. a perp market reading through a SEP-40 shim).
+//! - `update_quorum_ed25519_persistent` — M-of-N variant of the persistent
+//!   path: at least `quorum()` distinct registered publishers co-sign one
+//!   synchronized round and the per-asset MEDIAN of their prices is stored.
 //!
 //! Every persistent write also appends to a per-asset history ring (the
 //! `RING_CAP` most recent monotonic rounds), served by the `prices` and
@@ -38,6 +41,8 @@ pub enum Error {
     UnknownPublisher = 4,
     StalePrice = 5,
     InvalidQuorum = 6,
+    DuplicatePublisher = 7,
+    QuorumNotMet = 8,
 }
 
 #[contracttype]
@@ -57,6 +62,17 @@ pub struct PriceEntry {
     pub price: i128,
     pub timestamp: u64,
     pub round_id: u64,
+}
+
+/// One publisher's signed contribution to a quorum submission: `prices[i]`
+/// and `sigs[i]` align with the shared `assets` vector of the call. Rounds
+/// are transient call data — only the per-asset median is ever stored.
+#[contracttype]
+#[derive(Clone)]
+pub struct PublisherRound {
+    pub pubkey: BytesN<32>,
+    pub prices: Vec<i128>,
+    pub sigs: Vec<BytesN<64>>,
 }
 
 // Reject signed prices whose timestamp is older than this many seconds.
@@ -261,6 +277,110 @@ impl OracleV0 {
             // rounds — same rationale as the temporary-storage batch path: a
             // consumer's transaction must never fail on cross-consumer
             // ordering. Staleness is already bounded above.
+            let prev: Option<PriceEntry> = env
+                .storage()
+                .persistent()
+                .get(&DataKey::PricePers(asset.clone()));
+            let is_newer = match prev {
+                Some(prev) => round_id > prev.round_id,
+                None => true,
+            };
+            if is_newer {
+                write_pers(&env, asset, PriceEntry { price, timestamp, round_id });
+            }
+        }
+        Ok(())
+    }
+
+    // -------- Ed25519 quorum batch, persistent storage (production) --------
+    //
+    // M-of-N hardening of the persistent path: a relayer submits ONE
+    // synchronized round — every publisher signs the same (assets, timestamp,
+    // round_id) — carrying at least `quorum()` distinct registered publisher
+    // rounds, and the per-asset MEDIAN of the submitted prices is stored. A
+    // single compromised publisher key can then move the stored price by at
+    // most one rank instead of setting it outright.
+    //
+    // Signatures are verified with `build_msg` VERBATIM — the same 40-byte
+    // asset || price || timestamp || round_id encoding the single-publisher
+    // paths use and the JS golden-vector conformance tests pin — so off-chain
+    // signing code is identical across all three paths; only the price values
+    // differ per publisher.
+    pub fn update_quorum_ed25519_persistent(
+        env: Env,
+        assets: Vec<BytesN<8>>,
+        timestamp: u64,
+        round_id: u64,
+        rounds: Vec<PublisherRound>,
+    ) -> Result<(), Error> {
+        let n = assets.len();
+        // Every publisher round must align with the shared asset vector.
+        for round in rounds.iter() {
+            if round.prices.len() != n || round.sigs.len() != n {
+                return Err(Error::BatchLengthMismatch);
+            }
+        }
+
+        // Reject rounds signed more than STALENESS_SECS ago.
+        let now = env.ledger().timestamp();
+        if now.saturating_sub(timestamp) > STALENESS_SECS {
+            return Err(Error::StalePrice);
+        }
+
+        // Every signing key must be a registered publisher, each at most once.
+        if !env.storage().instance().has(&DataKey::Publishers) {
+            return Err(Error::NotInitialized);
+        }
+        let publishers: Vec<BytesN<32>> =
+            env.storage().instance().get(&DataKey::Publishers).unwrap();
+        let m = rounds.len();
+        for i in 0..m {
+            let round = rounds.get_unchecked(i);
+            if !is_publisher(&publishers, &round.pubkey) {
+                return Err(Error::UnknownPublisher);
+            }
+            for j in (i + 1)..m {
+                if rounds.get_unchecked(j).pubkey == round.pubkey {
+                    return Err(Error::DuplicatePublisher);
+                }
+            }
+        }
+
+        // The submission must carry at least the configured quorum.
+        if m < quorum(&env) {
+            return Err(Error::QuorumNotMet);
+        }
+
+        // Verify EVERY signature (per publisher per asset). One bad signature
+        // reverts the whole submission — same semantics as the single-
+        // publisher paths, where any failed verify aborts the transaction.
+        let crypto = env.crypto();
+        for round in rounds.iter() {
+            for i in 0..n {
+                let asset = assets.get_unchecked(i);
+                let msg = build_msg(
+                    &env,
+                    &asset,
+                    round.prices.get_unchecked(i),
+                    timestamp,
+                    round_id,
+                );
+                crypto.ed25519_verify(&round.pubkey, &msg, &round.sigs.get_unchecked(i));
+            }
+        }
+
+        // Per asset: store the median of the M publisher prices behind the
+        // same monotonic round_id check (newer-only, silent no-op on lag) as
+        // the single-publisher persistent path. write_pers also appends the
+        // median entry to the asset's history ring.
+        for i in 0..n {
+            let asset = assets.get_unchecked(i);
+            let mut px: Vec<i128> = Vec::new(&env);
+            for round in rounds.iter() {
+                px.push_back(round.prices.get_unchecked(i));
+            }
+            let price = median(&env, &px);
+
             let prev: Option<PriceEntry> = env
                 .storage()
                 .persistent()
@@ -490,6 +610,35 @@ impl OracleV0 {
 // set_quorum keep today's single-publisher behavior.
 fn quorum(env: &Env) -> u32 {
     env.storage().instance().get(&DataKey::Quorum).unwrap_or(1)
+}
+
+// Median of a non-empty price vector (callers guarantee at least one entry —
+// quorum is validated >= 1). Insertion sort into ascending order: the count
+// is publisher-quorum sized, so O(m^2) is negligible. Odd count takes the
+// middle; even count takes the arithmetic mean of the two middles via
+// checked i128 addition — prices are 1e7-scaled USD values, far below
+// i128::MAX / 2, so the checked add can only trap on absurd inputs (never
+// wrap).
+fn median(env: &Env, prices: &Vec<i128>) -> i128 {
+    let mut sorted: Vec<i128> = Vec::new(env);
+    for p in prices.iter() {
+        let mut idx = sorted.len();
+        for j in 0..sorted.len() {
+            if p < sorted.get_unchecked(j) {
+                idx = j;
+                break;
+            }
+        }
+        sorted.insert(idx, p);
+    }
+    let m = sorted.len();
+    if m % 2 == 1 {
+        sorted.get_unchecked(m / 2)
+    } else {
+        let a = sorted.get_unchecked(m / 2 - 1);
+        let b = sorted.get_unchecked(m / 2);
+        a.checked_add(b).unwrap() / 2
+    }
 }
 
 fn is_publisher(publishers: &Vec<BytesN<32>>, pubkey: &BytesN<32>) -> bool {

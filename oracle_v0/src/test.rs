@@ -6,7 +6,7 @@
 
 extern crate std;
 
-use crate::{Error, OracleV0, OracleV0Client};
+use crate::{Error, OracleV0, OracleV0Client, PublisherRound};
 use ed25519_dalek::{Signer, SigningKey};
 use rand::rngs::OsRng;
 use soroban_sdk::{
@@ -65,6 +65,61 @@ fn sign_round(
     }
     let pubkey = BytesN::from_array(env, &signer.verifying_key().to_bytes());
     (assets, prices, pubkey, sigs)
+}
+
+// Register the contract, mock auth, set a base ledger time, and init with
+// `n` freshly generated publisher keys. Returns the client and the keys.
+fn setup_multi(env: &Env, n: usize) -> (OracleV0Client<'_>, std::vec::Vec<SigningKey>) {
+    env.mock_all_auths();
+    env.ledger().set_timestamp(BASE_TS);
+    let contract_id = env.register(OracleV0, ());
+    let client = OracleV0Client::new(env, &contract_id);
+
+    let admin = Address::generate(env);
+    let mut signers = std::vec::Vec::new();
+    let mut publishers = Vec::new(env);
+    for _ in 0..n {
+        let signer = SigningKey::generate(&mut OsRng);
+        publishers.push_back(BytesN::from_array(env, &signer.verifying_key().to_bytes()));
+        signers.push(signer);
+    }
+    client.init(&admin, &publishers);
+    (client, signers)
+}
+
+// Sign one synchronized quorum round: every signer signs the shared
+// (assets, ts, round) over its own per-asset prices, using the exact same
+// 40-byte msg_bytes format as the single-publisher paths.
+// `prices_per_signer` is indexed [signer][asset]. Returns the shared assets
+// vec and the PublisherRound list for update_quorum_ed25519_persistent.
+fn sign_quorum_round(
+    env: &Env,
+    signers: &[SigningKey],
+    assets: &[[u8; 8]],
+    prices_per_signer: &[&[i128]],
+    ts: u64,
+    round: u64,
+) -> (Vec<BytesN<8>>, Vec<PublisherRound>) {
+    let mut assets_vec = Vec::new(env);
+    for asset in assets {
+        assets_vec.push_back(BytesN::from_array(env, asset));
+    }
+    let mut rounds = Vec::new(env);
+    for (signer, prices) in signers.iter().zip(prices_per_signer.iter()) {
+        let mut prices_vec = Vec::new(env);
+        let mut sigs = Vec::new(env);
+        for (asset, price) in assets.iter().zip(prices.iter()) {
+            let sig = signer.sign(&msg_bytes(asset, *price, ts, round));
+            prices_vec.push_back(*price);
+            sigs.push_back(BytesN::from_array(env, &sig.to_bytes()));
+        }
+        rounds.push_back(PublisherRound {
+            pubkey: BytesN::from_array(env, &signer.verifying_key().to_bytes()),
+            prices: prices_vec,
+            sigs,
+        });
+    }
+    (assets_vec, rounds)
 }
 
 #[test]
@@ -523,6 +578,307 @@ fn twap_is_mean_over_last_records() {
     assert_eq!(client.twap(&asset, &10u32), Some(200));
     // records == 0 is meaningless — None, never a fabricated value.
     assert_eq!(client.twap(&asset, &0u32), None);
+}
+
+// ---------------------------------------------------------------------------
+// update_quorum_ed25519_persistent — M-of-N median path.
+// ---------------------------------------------------------------------------
+
+#[test]
+fn quorum_2_of_3_stores_median_and_ring_entry() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 3);
+    client.set_quorum(&2u32);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+
+    // Two of the three registered publishers submit; even count -> mean of
+    // the two middles: (100 + 200) / 2 = 150.
+    let (assets, rounds) = sign_quorum_round(
+        &env,
+        &signers[0..2],
+        &[ASSET_BTC],
+        &[&[100], &[200]],
+        BASE_TS,
+        1,
+    );
+    client.update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+
+    let stored = client.get_price_pers(&asset).unwrap();
+    assert_eq!(stored.price, 150);
+    assert_eq!(stored.timestamp, BASE_TS);
+    assert_eq!(stored.round_id, 1);
+
+    // The median round landed in the history ring too...
+    let hist = client.prices(&asset, &10u32).unwrap();
+    assert_eq!(hist.len(), 1);
+    assert_eq!(hist.get_unchecked(0).price, 150);
+    // ...and the temporary-storage cache stays untouched.
+    assert!(client.get_price(&asset).is_none());
+}
+
+#[test]
+fn quorum_default_of_one_accepts_single_round() {
+    let env = Env::default();
+    // No set_quorum call: an unconfigured deployment behaves exactly like
+    // the single-publisher path (quorum defaults to 1).
+    let (client, signers) = setup_multi(&env, 2);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+
+    let (assets, rounds) =
+        sign_quorum_round(&env, &signers[0..1], &[ASSET_BTC], &[&[100]], BASE_TS, 1);
+    client.update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+
+    assert_eq!(client.get_price_pers(&asset).unwrap().price, 100);
+}
+
+#[test]
+fn quorum_rejects_below_threshold() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 3);
+    client.set_quorum(&2u32);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+
+    let (assets, rounds) =
+        sign_quorum_round(&env, &signers[0..1], &[ASSET_BTC], &[&[100]], BASE_TS, 1);
+    let res = client.try_update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+    assert_eq!(res, Err(Ok(Error::QuorumNotMet)));
+    assert!(client.get_price_pers(&asset).is_none());
+}
+
+#[test]
+fn quorum_rejects_duplicate_publisher() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 3);
+    client.set_quorum(&2u32);
+
+    // The same registered key signing twice must not count toward quorum.
+    let dup = [signers[0].clone(), signers[0].clone()];
+    let (assets, rounds) =
+        sign_quorum_round(&env, &dup, &[ASSET_BTC], &[&[100], &[100]], BASE_TS, 1);
+    let res = client.try_update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+    assert_eq!(res, Err(Ok(Error::DuplicatePublisher)));
+}
+
+#[test]
+fn quorum_rejects_unknown_publisher() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 2);
+    client.set_quorum(&2u32);
+
+    let rogue = SigningKey::generate(&mut OsRng);
+    let keys = [signers[0].clone(), rogue];
+    let (assets, rounds) =
+        sign_quorum_round(&env, &keys, &[ASSET_BTC], &[&[100], &[200]], BASE_TS, 1);
+    let res = client.try_update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+    assert_eq!(res, Err(Ok(Error::UnknownPublisher)));
+}
+
+#[test]
+fn quorum_rejects_batch_length_mismatch() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 2);
+    client.set_quorum(&2u32);
+
+    let (assets, rounds) = sign_quorum_round(
+        &env,
+        &signers[0..2],
+        &[ASSET_BTC],
+        &[&[100], &[200]],
+        BASE_TS,
+        1,
+    );
+    // Strip one publisher's prices so it no longer aligns with assets.
+    let mut bad = rounds.get_unchecked(1);
+    bad.prices = Vec::new(&env);
+    let mut rounds = rounds;
+    rounds.set(1, bad);
+
+    let res = client.try_update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+    assert_eq!(res, Err(Ok(Error::BatchLengthMismatch)));
+}
+
+#[test]
+fn quorum_rejects_stale_round() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 2);
+    client.set_quorum(&2u32);
+    // Round signed at BASE_TS, but the ledger has advanced 120s past it.
+    env.ledger().set_timestamp(BASE_TS + 120);
+
+    let (assets, rounds) = sign_quorum_round(
+        &env,
+        &signers[0..2],
+        &[ASSET_BTC],
+        &[&[100], &[200]],
+        BASE_TS,
+        1,
+    );
+    let res = client.try_update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+    assert_eq!(res, Err(Ok(Error::StalePrice)));
+}
+
+#[test]
+fn quorum_median_odd_takes_middle() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 3);
+    client.set_quorum(&3u32);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+
+    // Deliberately unsorted distinct prices: the middle by VALUE (200) must
+    // win, not the middle by submission order.
+    let (assets, rounds) = sign_quorum_round(
+        &env,
+        &signers[0..3],
+        &[ASSET_BTC],
+        &[&[300], &[100], &[200]],
+        BASE_TS,
+        1,
+    );
+    client.update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+
+    assert_eq!(client.get_price_pers(&asset).unwrap().price, 200);
+}
+
+#[test]
+fn quorum_median_even_takes_mean_of_middles() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 2);
+    client.set_quorum(&2u32);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+
+    // Unsorted even count: (150 + 250) / 2 = 200.
+    let (assets, rounds) = sign_quorum_round(
+        &env,
+        &signers[0..2],
+        &[ASSET_BTC],
+        &[&[250], &[150]],
+        BASE_TS,
+        1,
+    );
+    client.update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+
+    assert_eq!(client.get_price_pers(&asset).unwrap().price, 200);
+}
+
+#[test]
+fn quorum_median_is_per_asset() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 3);
+    client.set_quorum(&3u32);
+
+    // Two assets in one submission: each takes its own median across the
+    // three publishers, aligned by index with the shared assets vec.
+    let (assets, rounds) = sign_quorum_round(
+        &env,
+        &signers[0..3],
+        &[ASSET_BTC, ASSET_ETH],
+        &[&[300, 30], &[100, 10], &[200, 20]],
+        BASE_TS,
+        1,
+    );
+    client.update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+
+    let btc = client
+        .get_price_pers(&BytesN::from_array(&env, &ASSET_BTC))
+        .unwrap();
+    let eth = client
+        .get_price_pers(&BytesN::from_array(&env, &ASSET_ETH))
+        .unwrap();
+    assert_eq!(btc.price, 200);
+    assert_eq!(eth.price, 20);
+}
+
+#[test]
+fn quorum_one_bad_signature_reverts_everything() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 3);
+    client.set_quorum(&2u32);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+
+    let (assets, rounds) = sign_quorum_round(
+        &env,
+        &signers[0..3],
+        &[ASSET_BTC],
+        &[&[100], &[200], &[300]],
+        BASE_TS,
+        1,
+    );
+    // Tamper with the THIRD publisher's price after signing. Quorum (2)
+    // would still be met by the two intact rounds, but every submitted
+    // signature is verified — one bad signature reverts the whole call.
+    let mut bad = rounds.get_unchecked(2);
+    let mut tampered = Vec::new(&env);
+    tampered.push_back(999_999i128);
+    bad.prices = tampered;
+    let mut rounds = rounds;
+    rounds.set(2, bad);
+
+    let res = client.try_update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+    assert!(res.is_err());
+    // Nothing landed: no price, no ring entry.
+    assert!(client.get_price_pers(&asset).is_none());
+    assert!(client.prices(&asset, &10u32).is_none());
+}
+
+#[test]
+fn quorum_lagging_round_is_silent_noop_without_ring_entry() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 2);
+    client.set_quorum(&2u32);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+
+    // Round 5 lands: median (100 + 200) / 2 = 150.
+    let (a5, r5) = sign_quorum_round(
+        &env,
+        &signers[0..2],
+        &[ASSET_BTC],
+        &[&[100], &[200]],
+        BASE_TS,
+        5,
+    );
+    client.update_quorum_ed25519_persistent(&a5, &BASE_TS, &5u64, &r5);
+
+    // A lagging round (3) and an equal round (5) must succeed as silent
+    // no-ops: cache unchanged, no history entry.
+    let (a3, r3) = sign_quorum_round(
+        &env,
+        &signers[0..2],
+        &[ASSET_BTC],
+        &[&[400], &[500]],
+        BASE_TS,
+        3,
+    );
+    client.update_quorum_ed25519_persistent(&a3, &BASE_TS, &3u64, &r3);
+    let (a5b, r5b) = sign_quorum_round(
+        &env,
+        &signers[0..2],
+        &[ASSET_BTC],
+        &[&[600], &[700]],
+        BASE_TS,
+        5,
+    );
+    client.update_quorum_ed25519_persistent(&a5b, &BASE_TS, &5u64, &r5b);
+
+    let stored = client.get_price_pers(&asset).unwrap();
+    assert_eq!(stored.price, 150);
+    assert_eq!(stored.round_id, 5);
+    let hist = client.prices(&asset, &10u32).unwrap();
+    assert_eq!(hist.len(), 1);
+
+    // A strictly newer round advances the cache and pushes history.
+    let (a6, r6) = sign_quorum_round(
+        &env,
+        &signers[0..2],
+        &[ASSET_BTC],
+        &[&[300], &[400]],
+        BASE_TS,
+        6,
+    );
+    client.update_quorum_ed25519_persistent(&a6, &BASE_TS, &6u64, &r6);
+    let stored = client.get_price_pers(&asset).unwrap();
+    assert_eq!(stored.price, 350);
+    assert_eq!(stored.round_id, 6);
+    assert_eq!(client.prices(&asset, &10u32).unwrap().len(), 2);
 }
 
 // Decode an N-byte value from a hex string (test helper).
