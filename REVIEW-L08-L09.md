@@ -120,7 +120,16 @@ mean + windowing, `set_quorum` bounds + auth, `upgrade` auth, and the
 ## What happens after your approval
 
 Fresh deploy from this branch (no `upgrade()` exists on the old instance —
-this is the last forced redeploy), publisher key registered at init,
-`set_quorum(1)`, then the Noether Batch-1 script points shim/router/keeper
-at it. Quorum ≥ 2 arming is a later, separate step gated on more publisher
-keys + the keeper multi-key publish loop.
+this is the last forced redeploy), publisher key registered at init, quorum
+left at its default of 1, then the Noether Batch-1 script points
+shim/router/keeper at it.
+
+**Scope note (founder decision 2026-07-21):** the multi-key operational
+rollout is DESCOPED — quorum stays 1 permanently; no 3-key infra or
+multi-key publish loop is planned. The quorum entrypoint ships as a dormant
+capability (zero latency and zero behavior change at 1) for audit optics
+and future optionality; price integrity on the Noether side rests on the
+consumption-side multi-VENDOR guards (Stork + Reflector, fail-closed for
+majors) + deviation bands + the smoothed liquidation mark. Review the
+quorum sections accordingly: correctness matters (the code is live at
+quorum 1), the M>1 behaviors are dormant-capability review.
