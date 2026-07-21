@@ -12,10 +12,14 @@
 # NOERACLE_ADMIN_SECRET, NOERACLE_PUBLISHER_PUBLIC_HEX, and the per-network
 # TESTNET_RPC/TESTNET_PASSPHRASE or MAINNET_RPC/MAINNET_PASSPHRASE.
 #
-# After a deploy, consumers must repoint to the NEW address (there is no
-# upgrade entrypoint): this repo's .env *_ORACLE_V0, and on the Noether side
-# the shim (set_noeracle_oracle), router (set_noeracle), keeper env — see the
-# checklist this script prints at the end.
+# After a deploy, consumers must repoint to the NEW address: this repo's
+# .env *_ORACLE_V0, and on the Noether side the shim (set_noeracle_oracle),
+# router (set_noeracle), keeper env — see the checklist this script prints
+# at the end. The quorum build ships an admin-gated upgrade() entrypoint,
+# so this is the LAST deploy that forces a repoint — later changes land
+# in place. Quorum defaults to 1 (single publisher); do NOT raise it until
+# the multi-key publish loop exists (the batch publish path closes itself
+# whenever quorum > 1).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -63,7 +67,7 @@ cargo build -p noeracle_oracle_v0 --target wasm32v1-none --release
 
 echo "==> Verifying the exported interface is the hardened production surface"
 IFACE="$(stellar contract info interface --wasm "$WASM")"
-for required in update_batch_ed25519_args update_batch_ed25519_persistent get_price get_price_pers init set_publishers; do
+for required in update_batch_ed25519_args update_batch_ed25519_persistent get_price get_price_pers init set_publishers update_quorum_ed25519_persistent set_quorum get_quorum prices twap upgrade; do
   if ! grep -q "fn ${required}(" <<<"$IFACE"; then
     echo "FATAL: required entrypoint '${required}' missing from wasm exports" >&2
     exit 1
