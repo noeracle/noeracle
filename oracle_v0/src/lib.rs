@@ -250,6 +250,16 @@ impl OracleV0 {
             return Err(Error::BatchLengthMismatch);
         }
 
+        // This single-publisher path shares PricePers storage with the
+        // quorum path. Once the admin raises the quorum above 1 it MUST
+        // close — otherwise one compromised registered key could still set
+        // the stored price outright, bypassing the M-of-N median entirely.
+        // At the default quorum of 1 the two paths are equivalent, so
+        // existing single-publisher deployments are unchanged.
+        if quorum(&env) > 1 {
+            return Err(Error::QuorumNotMet);
+        }
+
         // The signing key must be a registered publisher.
         if !env.storage().instance().has(&DataKey::Publishers) {
             return Err(Error::NotInitialized);

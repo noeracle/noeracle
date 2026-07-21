@@ -649,6 +649,32 @@ fn quorum_rejects_below_threshold() {
 }
 
 #[test]
+fn quorum_above_one_closes_the_single_publisher_batch_path() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 3);
+    let asset = BytesN::from_array(&env, &ASSET_BTC);
+
+    // A perfectly valid single-publisher batch...
+    let (assets, prices, pubkey, sigs) =
+        sign_round(&env, &signers[0], &[(ASSET_BTC, 100)], BASE_TS, 1);
+
+    // ...is rejected outright while quorum > 1: PricePers is shared, so the
+    // batch path would otherwise let ONE compromised key bypass the M-of-N
+    // median entirely.
+    client.set_quorum(&2u32);
+    let res = client.try_update_batch_ed25519_persistent(
+        &assets, &prices, &BASE_TS, &1u64, &pubkey, &sigs,
+    );
+    assert_eq!(res, Err(Ok(Error::QuorumNotMet)));
+    assert!(client.get_price_pers(&asset).is_none());
+
+    // Lowering the quorum back to 1 re-opens it unchanged.
+    client.set_quorum(&1u32);
+    client.update_batch_ed25519_persistent(&assets, &prices, &BASE_TS, &1u64, &pubkey, &sigs);
+    assert_eq!(client.get_price_pers(&asset).unwrap().price, 100);
+}
+
+#[test]
 fn quorum_rejects_duplicate_publisher() {
     let env = Env::default();
     let (client, signers) = setup_multi(&env, 3);
