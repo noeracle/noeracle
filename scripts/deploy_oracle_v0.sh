@@ -67,7 +67,7 @@ cargo build -p noeracle_oracle_v0 --target wasm32v1-none --release
 
 echo "==> Verifying the exported interface is the hardened production surface"
 IFACE="$(stellar contract info interface --wasm "$WASM")"
-for required in update_batch_ed25519_args update_batch_ed25519_persistent get_price get_price_pers init set_publishers update_quorum_ed25519_persistent set_quorum get_quorum prices twap upgrade; do
+for required in update_batch_ed25519_args update_batch_ed25519_persistent get_price get_price_pers __constructor set_publishers update_quorum_ed25519_persistent set_quorum get_quorum prices twap upgrade; do
   if ! grep -q "fn ${required}(" <<<"$IFACE"; then
     echo "FATAL: required entrypoint '${required}' missing from wasm exports" >&2
     exit 1
@@ -85,7 +85,7 @@ echo
 echo "About to deploy oracle_v0 with:"
 echo "  network:    $NETWORK"
 echo "  rpc:        $RPC"
-echo "  admin:      $ADMIN_PUBLIC (must authorize init)"
+echo "  admin:      $ADMIN_PUBLIC (authorizes the deploy-time constructor)"
 echo "  publisher:  $PUBLISHER_HEX"
 echo
 if [[ "$NETWORK" == "mainnet" ]]; then
@@ -96,24 +96,16 @@ else
   [[ "$CONFIRM" == "y" || "$CONFIRM" == "Y" ]] || { echo "aborted"; exit 1; }
 fi
 
-echo "==> Deploying"
+echo "==> Deploying (constructor runs atomically — no post-deploy init window)"
 CONTRACT_ID="$(stellar contract deploy \
   --wasm "$WASM" \
   --source-account "$ADMIN_SECRET" \
   --rpc-url "$RPC" \
-  --network-passphrase "$PASSPHRASE")"
-echo "    deployed: $CONTRACT_ID"
-
-echo "==> Running init ceremony (admin + publisher registration)"
-stellar contract invoke \
-  --id "$CONTRACT_ID" \
-  --source-account "$ADMIN_SECRET" \
-  --rpc-url "$RPC" \
   --network-passphrase "$PASSPHRASE" \
-  -- init \
+  -- \
   --admin "$ADMIN_PUBLIC" \
-  --publishers "[\"$PUBLISHER_HEX\"]"
-echo "    init OK — publisher set registered"
+  --publishers "[\"$PUBLISHER_HEX\"]")"
+echo "    deployed + initialized: $CONTRACT_ID"
 
 echo
 echo "=========================================================="

@@ -18,6 +18,9 @@
 //! `RING_CAP` most recent monotonic rounds), served by the `prices` and
 //! `twap` views.
 //!
+//! Initialization happens in `__constructor`, atomically inside the deploy
+//! transaction — there is no post-deploy init window to front-run.
+//!
 //! The remaining `update_*` entrypoints exist only to measure the Soroban
 //! host cost of alternative signature schemes. They perform NO publisher or
 //! freshness checks and are compiled only with the `bench` feature — never
@@ -43,6 +46,7 @@ pub enum Error {
     InvalidQuorum = 6,
     DuplicatePublisher = 7,
     QuorumNotMet = 8,
+    InvalidPrice = 9,
 }
 
 #[contracttype]
@@ -77,6 +81,15 @@ pub struct PublisherRound {
 
 // Reject signed prices whose timestamp is older than this many seconds.
 const STALENESS_SECS: u64 = 60;
+// Reject signed prices stamped further in the FUTURE than this (ALX-3:
+// `saturating_sub` alone reads a far-future timestamp as age 0). A small
+// allowance is required because the keeper stamps wall-clock signing time
+// and the ledger close time it is compared against can trail it by seconds.
+const FUTURE_SKEW_SECS: u64 = 30;
+// Bounds on any accepted price (1e7-scaled USD). Non-positive prices are
+// nonsense for a spot oracle, and the cap keeps a RING_CAP-entry sum
+// arithmetically unable to overflow i128 (ALX-4): 32 * 1e30 << i128::MAX.
+const MAX_PRICE: i128 = 1_000_000_000_000_000_000_000_000_000_000;
 
 // Conservative TTLs: keep entries alive a bit longer than minimum so a
 // keeper outage of a few minutes doesn't immediately archive everything.
@@ -94,22 +107,17 @@ pub struct OracleV0;
 
 #[contractimpl]
 impl OracleV0 {
-    /// One-time setup: record the admin Address and the initial publisher
-    /// Ed25519 key set. Errors if the contract is already initialized.
-    /// The admin must authorize the call, so a freshly deployed instance
-    /// cannot be claimed by whoever calls init first.
-    pub fn init(
-        env: Env,
-        admin: Address,
-        publishers: Vec<BytesN<32>>,
-    ) -> Result<(), Error> {
-        if env.storage().instance().has(&DataKey::Admin) {
-            return Err(Error::AlreadyInitialized);
-        }
+    /// Deploy-time setup: record the admin Address and the initial publisher
+    /// Ed25519 key set. Runs atomically inside the deploy transaction, so a
+    /// fresh instance can never be claimed by a third party (ALX-1: the
+    /// former separate `init` entrypoint left a front-run window between
+    /// deploy and initialization; it has been removed outright). The admin
+    /// must still authorize, so a deployer cannot install someone ELSE as
+    /// admin without their signature.
+    pub fn __constructor(env: Env, admin: Address, publishers: Vec<BytesN<32>>) {
         admin.require_auth();
         env.storage().instance().set(&DataKey::Admin, &admin);
         env.storage().instance().set(&DataKey::Publishers, &publishers);
-        Ok(())
     }
 
     /// Replace the publisher Ed25519 key set. Admin-authenticated.
@@ -197,10 +205,19 @@ impl OracleV0 {
 
         // Reject rounds signed more than STALENESS_SECS ago.
         let now = env.ledger().timestamp();
-        if now.saturating_sub(timestamp) > STALENESS_SECS {
+        if now.saturating_sub(timestamp) > STALENESS_SECS
+            || timestamp > now.saturating_add(FUTURE_SKEW_SECS)
+        {
             return Err(Error::StalePrice);
         }
 
+        // Bound every price before any signature work (ALX-4).
+        for i in 0..n {
+            let p = prices.get_unchecked(i);
+            if p <= 0 || p > MAX_PRICE {
+                return Err(Error::InvalidPrice);
+            }
+        }
         let crypto = env.crypto();
         for i in 0..n {
             let asset = assets.get_unchecked(i);
@@ -272,10 +289,19 @@ impl OracleV0 {
 
         // Reject rounds signed more than STALENESS_SECS ago.
         let now = env.ledger().timestamp();
-        if now.saturating_sub(timestamp) > STALENESS_SECS {
+        if now.saturating_sub(timestamp) > STALENESS_SECS
+            || timestamp > now.saturating_add(FUTURE_SKEW_SECS)
+        {
             return Err(Error::StalePrice);
         }
 
+        // Bound every price before any signature work (ALX-4).
+        for i in 0..n {
+            let p = prices.get_unchecked(i);
+            if p <= 0 || p > MAX_PRICE {
+                return Err(Error::InvalidPrice);
+            }
+        }
         let crypto = env.crypto();
         for i in 0..n {
             let asset = assets.get_unchecked(i);
@@ -333,10 +359,21 @@ impl OracleV0 {
 
         // Reject rounds signed more than STALENESS_SECS ago.
         let now = env.ledger().timestamp();
-        if now.saturating_sub(timestamp) > STALENESS_SECS {
+        if now.saturating_sub(timestamp) > STALENESS_SECS
+            || timestamp > now.saturating_add(FUTURE_SKEW_SECS)
+        {
             return Err(Error::StalePrice);
         }
 
+        // Bound every submitted price before any signature work (ALX-4).
+        for round in rounds.iter() {
+            for i in 0..n {
+                let p = round.prices.get_unchecked(i);
+                if p <= 0 || p > MAX_PRICE {
+                    return Err(Error::InvalidPrice);
+                }
+            }
+        }
         // Every signing key must be a registered publisher, each at most once.
         if !env.storage().instance().has(&DataKey::Publishers) {
             return Err(Error::NotInitialized);
@@ -451,7 +488,7 @@ impl OracleV0 {
             // Prices are 1e7-scaled USD values, so a RING_CAP-entry sum sits
             // far below i128::MAX; checked add still traps on absurd inputs
             // rather than wrapping.
-            sum = sum.checked_add(ring.get_unchecked(i).price).unwrap();
+            sum = sum.checked_add(ring.get_unchecked(i).price)?;
         }
         Some(sum / take as i128)
     }

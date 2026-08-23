@@ -4,7 +4,7 @@
 //! the admin surface (publisher set, quorum config, upgrade) and the history
 //! ring views (`prices`/`twap`): happy paths, unknown/duplicate publisher,
 //! quorum not met, per-asset median (odd/even), one-bad-signature revert,
-//! stale price, stale round, batch-length mismatch, double init, init auth,
+//! stale price, future timestamp, price bounds, batch-length mismatch, constructor auth,
 //! storage isolation, ring capacity/ordering, and publisher rotation.
 
 extern crate std;
@@ -37,14 +37,13 @@ fn msg_bytes(asset: &[u8; 8], price: i128, ts: u64, round: u64) -> [u8; 40] {
 fn setup(env: &Env) -> (OracleV0Client<'_>, SigningKey) {
     env.mock_all_auths();
     env.ledger().set_timestamp(BASE_TS);
-    let contract_id = env.register(OracleV0, ());
-    let client = OracleV0Client::new(env, &contract_id);
-
     let signer = SigningKey::generate(&mut OsRng);
     let admin = Address::generate(env);
     let mut publishers = Vec::new(env);
     publishers.push_back(BytesN::from_array(env, &signer.verifying_key().to_bytes()));
-    client.init(&admin, &publishers);
+    // Constructor-initialized: admin + publisher set land atomically at deploy.
+    let contract_id = env.register(OracleV0, (admin.clone(), publishers.clone()));
+    let client = OracleV0Client::new(env, &contract_id);
     (client, signer)
 }
 
@@ -75,9 +74,6 @@ fn sign_round(
 fn setup_multi(env: &Env, n: usize) -> (OracleV0Client<'_>, std::vec::Vec<SigningKey>) {
     env.mock_all_auths();
     env.ledger().set_timestamp(BASE_TS);
-    let contract_id = env.register(OracleV0, ());
-    let client = OracleV0Client::new(env, &contract_id);
-
     let admin = Address::generate(env);
     let mut signers = std::vec::Vec::new();
     let mut publishers = Vec::new(env);
@@ -86,7 +82,8 @@ fn setup_multi(env: &Env, n: usize) -> (OracleV0Client<'_>, std::vec::Vec<Signin
         publishers.push_back(BytesN::from_array(env, &signer.verifying_key().to_bytes()));
         signers.push(signer);
     }
-    client.init(&admin, &publishers);
+    let contract_id = env.register(OracleV0, (admin.clone(), publishers.clone()));
+    let client = OracleV0Client::new(env, &contract_id);
     (client, signers)
 }
 
@@ -240,26 +237,92 @@ fn rejects_batch_length_mismatch() {
 }
 
 #[test]
-fn init_requires_admin_auth() {
+fn constructor_requires_admin_auth() {
     let env = Env::default();
-    // Deliberately NO mock_all_auths: a freshly deployed instance must refuse
-    // an init whose admin has not authorized the call (first-writer-wins
-    // front-running protection).
-    let contract_id = env.register(OracleV0, ());
-    let client = OracleV0Client::new(&env, &contract_id);
+    // Deliberately NO mock_all_auths: a deploy whose admin has not
+    // authorized the constructor must fail — a deployer cannot install
+    // someone else as admin without their signature.
     let admin = Address::generate(&env);
     let publishers: Vec<BytesN<32>> = Vec::new(&env);
-    assert!(client.try_init(&admin, &publishers).is_err());
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        env.register(OracleV0, (admin.clone(), publishers.clone()));
+    }));
+    assert!(result.is_err());
 }
 
 #[test]
-fn rejects_double_init() {
+fn future_timestamp_rejected_beyond_skew() {
     let env = Env::default();
-    let (client, _signer) = setup(&env); // setup already called init once
-    let admin = Address::generate(&env);
-    let publishers: Vec<BytesN<32>> = Vec::new(&env);
-    let res = client.try_init(&admin, &publishers);
-    assert_eq!(res, Err(Ok(Error::AlreadyInitialized)));
+    let (client, signer) = setup(&env);
+    // 31 s ahead of ledger time: outside FUTURE_SKEW_SECS.
+    let ts = BASE_TS + 31;
+    let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, 100)], ts, 1);
+    let res = client.try_update_batch_ed25519_args(&a, &p, &ts, &1u64, &pk, &s);
+    assert_eq!(res, Err(Ok(Error::StalePrice)));
+    // 10 s ahead: inside the clock-skew allowance, accepted.
+    let ts_ok = BASE_TS + 10;
+    let (a2, p2, pk2, s2) = sign_round(&env, &signer, &[(ASSET_BTC, 100)], ts_ok, 2);
+    client.update_batch_ed25519_args(&a2, &p2, &ts_ok, &2u64, &pk2, &s2);
+}
+
+#[test]
+fn persistent_future_timestamp_rejected_beyond_skew() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    let ts = BASE_TS + 31;
+    let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, 100)], ts, 1);
+    let res = client.try_update_batch_ed25519_persistent(&a, &p, &ts, &1u64, &pk, &s);
+    assert_eq!(res, Err(Ok(Error::StalePrice)));
+}
+
+#[test]
+fn quorum_future_timestamp_rejected_beyond_skew() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 2);
+    client.set_quorum(&2u32);
+    let ts = BASE_TS + 31;
+    let (assets, rounds) = sign_quorum_round(
+        &env, &signers, &[ASSET_BTC], &[&[100], &[102]], ts, 1,
+    );
+    let res = client.try_update_quorum_ed25519_persistent(&assets, &ts, &1u64, &rounds);
+    assert_eq!(res, Err(Ok(Error::StalePrice)));
+}
+
+#[test]
+fn rejects_nonpositive_price() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    for bad in [0i128, -1i128] {
+        let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, bad)], BASE_TS, 1);
+        let res = client.try_update_batch_ed25519_args(&a, &p, &BASE_TS, &1u64, &pk, &s);
+        assert_eq!(res, Err(Ok(Error::InvalidPrice)));
+        let res = client.try_update_batch_ed25519_persistent(&a, &p, &BASE_TS, &1u64, &pk, &s);
+        assert_eq!(res, Err(Ok(Error::InvalidPrice)));
+    }
+}
+
+#[test]
+fn rejects_price_above_cap() {
+    let env = Env::default();
+    let (client, signer) = setup(&env);
+    let too_big: i128 = 1_000_000_000_000_000_000_000_000_000_001;
+    let (a, p, pk, s) = sign_round(&env, &signer, &[(ASSET_BTC, too_big)], BASE_TS, 1);
+    let res = client.try_update_batch_ed25519_persistent(&a, &p, &BASE_TS, &1u64, &pk, &s);
+    assert_eq!(res, Err(Ok(Error::InvalidPrice)));
+}
+
+#[test]
+fn quorum_rejects_out_of_bounds_price() {
+    let env = Env::default();
+    let (client, signers) = setup_multi(&env, 2);
+    client.set_quorum(&2u32);
+    // One publisher submits a non-positive price: the whole round rejects
+    // before any signature work.
+    let (assets, rounds) = sign_quorum_round(
+        &env, &signers, &[ASSET_BTC], &[&[100], &[0]], BASE_TS, 1,
+    );
+    let res = client.try_update_quorum_ed25519_persistent(&assets, &BASE_TS, &1u64, &rounds);
+    assert_eq!(res, Err(Ok(Error::InvalidPrice)));
 }
 
 #[test]
@@ -938,14 +1001,12 @@ fn conformance_with_js_keeper_encoder() {
     let env = Env::default();
     env.mock_all_auths();
     env.ledger().set_timestamp(1_700_000_000);
-    let contract_id = env.register(OracleV0, ());
-    let client = OracleV0Client::new(&env, &contract_id);
-
     let pubkey: BytesN<32> = BytesN::from_array(&env, &hex_bytes::<32>(PUBKEY));
     let admin = Address::generate(&env);
     let mut publishers = Vec::new(&env);
     publishers.push_back(pubkey.clone());
-    client.init(&admin, &publishers);
+    let contract_id = env.register(OracleV0, (admin.clone(), publishers.clone()));
+    let client = OracleV0Client::new(&env, &contract_id);
 
     let mut assets = Vec::new(&env);
     assets.push_back(BytesN::from_array(&env, b"BTCUSD\0\0"));
@@ -979,14 +1040,12 @@ fn conformance_persistent_with_js_keeper_encoder() {
     let env = Env::default();
     env.mock_all_auths();
     env.ledger().set_timestamp(1_700_000_000);
-    let contract_id = env.register(OracleV0, ());
-    let client = OracleV0Client::new(&env, &contract_id);
-
     let pubkey: BytesN<32> = BytesN::from_array(&env, &hex_bytes::<32>(PUBKEY));
     let admin = Address::generate(&env);
     let mut publishers = Vec::new(&env);
     publishers.push_back(pubkey.clone());
-    client.init(&admin, &publishers);
+    let contract_id = env.register(OracleV0, (admin.clone(), publishers.clone()));
+    let client = OracleV0Client::new(&env, &contract_id);
 
     let mut assets = Vec::new(&env);
     assets.push_back(BytesN::from_array(&env, b"BTCUSD\0\0"));
