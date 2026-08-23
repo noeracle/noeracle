@@ -24,7 +24,7 @@ The on-chain component is one Soroban contract, `oracle_v0` (~757 lines, 16 KB W
 5. **Relay.** A consumer (Noether's router or keeper, or any SDK user) submits the attestation inside its own transaction: `update_batch_ed25519_persistent` for readers between heartbeats (Noether), `update_batch_ed25519_args` for verify-then-read-inline consumers, or `update_quorum_ed25519_persistent` carrying several publishers' rounds when quorum > 1.
 6. **Verify and store.** The contract checks vector lengths, the quorum gate, membership of the signing key in the admin-maintained publisher set, price bounds (0 < p ≤ 1e30), a 60 s staleness bound against ledger time plus a 30 s future-skew allowance, every per-asset signature via the host's Ed25519, and a per-asset monotonic `round_id`; only a newer round is written. Persistent writes extend the entry's TTL and append to a 32-entry per-asset history ring. On the quorum path the stored value is the per-asset **median** of the submitted publisher prices.
 7. **Read.** Consumers read `get_price` (temporary) or `get_price_pers` (persistent), plus `prices`/`twap` over the ring. Noether reads through a SEP-40 shim and applies its own staleness bound and deviation band against its last-good price.
-8. **Administer.** A single admin account can `init` (once), `set_publishers`, `set_quorum`, and `upgrade` the WASM.
+8. **Administer.** A single admin account can `set_publishers`, `set_quorum`, and `upgrade` the WASM (initialization happened once, inside the deploy-time constructor).
 
 ### 1.2 Data-flow diagram
 
@@ -166,13 +166,13 @@ Workspace: `soroban-sdk` 26, target `wasm32v1-none`, release profile `overflow-c
 
 ## Appendix D — Security practices to date
 
-- **Tests:** 46 contract tests (init authorization, unknown and duplicate publishers, batch-length mismatches, staleness, monotonic no-op on lagging and replayed rounds, quorum threshold and median, single-path auto-close at quorum > 1 and reopen at 1, history ring and views, `upgrade`); 8 host-cost harness tests with committed ledger snapshots; 22 aggregation tests on the attestation service.
+- **Tests:** 46 contract tests (constructor authorization, future-timestamp and price-bound rejection on all three write paths, unknown and duplicate publishers, batch-length mismatches, staleness, monotonic no-op on lagging and replayed rounds, quorum threshold and median, single-path auto-close at quorum > 1 and reopen at 1, history ring and views, `upgrade`); 8 host-cost harness tests with committed ledger snapshots; 22 aggregation tests on the attestation service.
 - **Build hardening:** `overflow-checks = true`, `panic = "abort"`; checked arithmetic in `median` and `twap`, saturating arithmetic in the staleness check.
 - **Feature gating:** benchmark entrypoints compiled out of production builds; live function list verified after deploy.
 - **Static analysis and advisories:** `cargo-scout-audit` 0.3.16 — 0 detections on both crates; `cargo audit` — clean (yanked-crate warnings only); **Almanax** (Stellar agent) — 4 findings, 3 remediated and shipped the same day, 1 = the pre-disclosed §N-4. Reports and triage in `audit/`.
 - **CI:** contract tests on every push; external keeper monitor and SLA-check workflows.
 - **Internal review:** `REVIEW-L08-L09.md` found and closed the single-publisher quorum bypass before deployment.
-- **Operations:** reproducible deploy + init script; documented `/health` semantics; Telegram paging.
+- **Operations:** reproducible constructor-deploy script; documented `/health` semantics; Telegram paging.
 
 ## Appendix E — Assumptions and out of scope
 
