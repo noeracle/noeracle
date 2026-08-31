@@ -95,6 +95,28 @@ export const ASSETS = {
     coinbase: "LTC-USD", binance: "LTCUSDT", kraken: "LTCUSDT",
     okx: "LTC-USDT", bybit: "LTCUSDT",
   },
+  // Tokenized gold. These price the TOKEN (Paxos / Tether gold), not LBMA
+  // spot — the tags stay PAXG/XAUT on purpose so the basis is never hidden.
+  "PAXG/USD": {
+    tag8: "PAXGUSD",
+    coinbase: "PAXG-USD", binance: "PAXGUSDT", kraken: "PAXGUSD",
+    okx: "PAXG-USDT",
+  },
+  "XAUT/USD": {
+    tag8: "XAUTUSD",
+    binance: "XAUTUSDT", kraken: "XAUTUSD",
+    okx: "XAUT-USDT", bybit: "XAUTUSDT",
+  },
+  "PUMP/USD": {
+    tag8: "PUMPUSD",
+    coinbase: "PUMP-USD", binance: "PUMPUSDT", kraken: "PUMPUSD",
+    okx: "PUMP-USDT", bybit: "PUMPUSDT",
+  },
+  "UNI/USD": {
+    tag8: "UNIUSD",
+    coinbase: "UNI-USD", binance: "UNIUSDT", kraken: "UNIUSD",
+    okx: "UNI-USDT", bybit: "UNIUSDT",
+  },
 };
 
 // Per-exchange weight in the aggregated price (see aggregate.mjs).
